@@ -3,6 +3,9 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#if !(NGX_STAT_STUB)
+#error "This module needs the stub status module."
+#endif
 
 typedef struct {
     u_char                       color;
@@ -45,10 +48,12 @@ typedef struct {
 
 
 static void ngx_http_limit_access_delay(ngx_http_request_t *r);
-static ngx_int_t ngx_http_limit_access_lookup(ngx_http_limit_access_conf_t *lrcf,
-    ngx_uint_t hash, u_char *data, size_t len, ngx_http_limit_access_node_t **lrp);
+static ngx_int_t ngx_http_limit_access_lookup(ngx_http_limit_access_conf_t *lacf,
+    ngx_uint_t hash, u_char *data, size_t len, ngx_http_limit_access_node_t **lap);
 static void ngx_http_limit_access_expire(ngx_http_limit_access_ctx_t *ctx,
     ngx_uint_t n);
+static ngx_http_variable_t * ngx_http_get_my_variable(ngx_http_request_t *r, 
+        ngx_uint_t index);
 
 static void *ngx_http_limit_access_create_conf(ngx_conf_t *cf);
 static char *ngx_http_limit_access_merge_conf(ngx_conf_t *cf, void *parent,
@@ -57,6 +62,8 @@ static char *ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char *ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
+static char *ngx_http_limit_access_status(ngx_conf_t *cf, ngx_command_t *cmd, 
+        void *conf);
 static ngx_int_t ngx_http_limit_access_init(ngx_conf_t *cf);
 
 
@@ -91,6 +98,13 @@ static ngx_command_t  ngx_http_limit_access_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_limit_access_conf_t, limit_log_level),
       &ngx_http_limit_access_log_levels },
+
+    { ngx_string("limit_access_status"),
+      NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_http_limit_access_status,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
 
       ngx_null_command
 };
@@ -130,24 +144,28 @@ ngx_module_t  ngx_http_limit_access_module = {
 static ngx_int_t
 ngx_http_limit_access_handler(ngx_http_request_t *r)
 {
-    size_t                      len, n;
-    uint32_t                    hash;
-    ngx_int_t                   rc;
-    ngx_uint_t                  excess;
-    ngx_time_t                 *tp;
-    ngx_rbtree_node_t          *node;
-    ngx_http_variable_value_t  *vv;
+    size_t                         len, n;
+    uint32_t                       hash;
+    ngx_int_t                      rc;
+    ngx_uint_t                     excess;
+    ngx_time_t                    *tp;
+    ngx_rbtree_node_t             *node;
+    ngx_http_variable_value_t     *vv;
     ngx_http_limit_access_ctx_t   *ctx;
-    ngx_http_limit_access_node_t  *lr;
-    ngx_http_limit_access_conf_t  *lrcf;
+    ngx_http_limit_access_node_t  *la;
+    ngx_http_limit_access_conf_t  *lacf;
 
-    lrcf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
-
-    if (lrcf->shm_zone == NULL) {
+    if (r->main->limit_req_set) {
         return NGX_DECLINED;
     }
 
-    ctx = lrcf->shm_zone->data;
+    lacf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
+
+    if (lacf->shm_zone == NULL || lacf->burst == 0) {
+        return NGX_DECLINED;
+    }
+
+    ctx = lacf->shm_zone->data;
 
     vv = ngx_http_get_indexed_variable(r, ctx->index);
 
@@ -169,20 +187,22 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
 
+    r->main->limit_req_set = 1;
+
     hash = ngx_crc32_short(vv->data, len);
 
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
     ngx_http_limit_access_expire(ctx, 1);
 
-    rc = ngx_http_limit_access_lookup(lrcf, hash, vv->data, len, &lr);
+    rc = ngx_http_limit_access_lookup(lacf, hash, vv->data, len, &la);
 
-    if (lr) {
-        ngx_queue_remove(&lr->queue);
+    if (la) {
+        ngx_queue_remove(&la->queue);
 
-        ngx_queue_insert_head(&ctx->sh->queue, &lr->queue);
+        ngx_queue_insert_head(&ctx->sh->queue, &la->queue);
 
-        excess = lr->excess;
+        excess = la->excess;
 
     } else {
         excess = 0;
@@ -194,9 +214,9 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
     if (rc == NGX_BUSY) {
         ngx_shmtx_unlock(&ctx->shpool->mutex);
 
-        ngx_log_error(lrcf->limit_log_level, r->connection->log, 0,
+        ngx_log_error(lacf->limit_log_level, r->connection->log, 0,
                       "limiting requests, excess: %ui.%03ui by zone \"%V\"",
-                      excess / 1000, excess % 1000, &lrcf->shm_zone->shm.name);
+                      excess / 1000, excess % 1000, &lacf->shm_zone->shm.name);
 
         return NGX_HTTP_SERVICE_UNAVAILABLE;
     }
@@ -204,13 +224,13 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
     if (rc == NGX_AGAIN) {
         ngx_shmtx_unlock(&ctx->shpool->mutex);
 
-        if (lrcf->nodelay) {
+        if (lacf->nodelay) {
             return NGX_DECLINED;
         }
 
-        ngx_log_error(lrcf->delay_log_level, r->connection->log, 0,
+        ngx_log_error(lacf->delay_log_level, r->connection->log, 0,
                       "delaying request, excess: %ui.%03ui, by zone \"%V\"",
-                      excess / 1000, excess % 1000, &lrcf->shm_zone->shm.name);
+                      excess / 1000, excess % 1000, &lacf->shm_zone->shm.name);
 
         if (ngx_handle_read_event(r->connection->read, 0) != NGX_OK) {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -246,26 +266,159 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
         }
     }
 
-    lr = (ngx_http_limit_access_node_t *) &node->color;
+    la = (ngx_http_limit_access_node_t *) &node->color;
 
     node->key = hash;
-    lr->len = (u_char) len;
+    la->len = (u_char) len;
 
     tp = ngx_timeofday();
-    lr->last = (ngx_msec_t) (tp->sec * 1000 + tp->msec);
+    la->last = (ngx_msec_t) (tp->sec * 1000 + tp->msec);
 
-    lr->excess = 0;
-    ngx_memcpy(lr->data, vv->data, len);
+    la->excess = 0;
+    ngx_memcpy(la->data, vv->data, len);
 
     ngx_rbtree_insert(&ctx->sh->rbtree, node);
 
-    ngx_queue_insert_head(&ctx->sh->queue, &lr->queue);
+    ngx_queue_insert_head(&ctx->sh->queue, &la->queue);
 
 done:
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
     return NGX_DECLINED;
+}
+
+
+static ngx_int_t
+ngx_http_limit_access_status_handler(ngx_http_request_t *r)
+{
+    double                        loadavg[3];
+    ngx_int_t                     rc;
+    ngx_int_t                     excess;
+    ngx_buf_t                    *b;
+    ngx_uint_t                    i;
+    ngx_time_t                   *tp;
+    ngx_msec_t                    now;
+    ngx_chain_t                   out;
+    ngx_queue_t                  *q;
+    ngx_msec_int_t                ms;
+    ngx_atomic_int_t              ap, hn, ac, rq, rd, wr;
+    ngx_http_variable_t           *v;
+    ngx_http_limit_access_ctx_t   *ctx;
+    ngx_http_limit_access_node_t  *la;
+    ngx_http_limit_access_conf_t  *lacf;
+
+    if (r->method != NGX_HTTP_GET && r->method != NGX_HTTP_HEAD) {
+        return NGX_HTTP_NOT_ALLOWED;
+    }
+
+    rc = ngx_http_discard_request_body(r);
+
+    if (rc != NGX_OK) {
+        return rc;
+    }
+
+    ngx_str_set(&r->headers_out.content_type, "text/plain");
+
+    if (r->method == NGX_HTTP_HEAD) {
+        r->headers_out.status = NGX_HTTP_OK;
+
+        rc = ngx_http_send_header(r);
+
+        if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+            return rc;
+        }
+    }
+
+    b = ngx_create_temp_buf(r->pool, ngx_pagesize * 10);
+    if (b == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    out.buf = b;
+    out.next = NULL;
+
+    if (getloadavg(loadavg, 3) != -1) {
+        b->last = ngx_sprintf(b->last, "Load averages: %.6f, %.6f, %.6f \n\n", 
+                loadavg[0], loadavg[1], loadavg[2]);
+    }
+
+    ap = *ngx_stat_accepted;
+    hn = *ngx_stat_handled;
+    ac = *ngx_stat_active;
+    rq = *ngx_stat_requests;
+    rd = *ngx_stat_reading;
+    wr = *ngx_stat_writing;
+
+    b->last = ngx_sprintf(b->last, "Active connections: %uA \n", ac);
+
+    b->last = ngx_sprintf(b->last,
+            "Server accetps: %uA handled: %uA requests%: %uA \n", ap, hn, rq);
+
+    b->last = ngx_sprintf(b->last, "Reading: %uA Writing: %uA Waiting: %uA \n\n",
+                          rd, wr, ac - (rd + wr));
+
+    lacf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   "limit_access1");
+
+    if (lacf->shm_zone == NULL) {
+        goto output;
+    }
+
+    ctx = lacf->shm_zone->data;
+
+    v = ngx_http_get_my_variable(r, ctx->index);
+    if (v == NULL) {
+        goto output;
+    }
+
+    if (ngx_queue_empty(&ctx->sh->queue)) {
+        goto output;
+    }
+
+    tp = ngx_timeofday();
+
+    now = (ngx_msec_t) (tp->sec * 1000 + tp->msec);
+
+    b->last = ngx_snprintf(b->last, b->end - b->last, "zone=%V\n", &lacf->shm_zone->shm.name);
+
+    i = 1;
+    for (q = ngx_queue_head(&ctx->sh->queue); 
+            q != ngx_queue_sentinel(&ctx->sh->queue);
+            q = ngx_queue_next(q)) {
+
+        la = ngx_queue_data(q, ngx_http_limit_access_node_t, queue);
+
+        ms = (ngx_msec_int_t) (now - la->last);
+        excess = la->excess - ctx->rate * ngx_abs(ms) / 1000 + 1000;
+        if (excess < 0) {
+            excess = 0;
+        }
+
+        b->last = ngx_snprintf(b->last, b->end - b->last, 
+                "%d: $%V=%*s, excess=%d\n", 
+                i++, &v->name, la->len, la->data, (ngx_int_t)excess/1000);
+
+        if (i == 100) {
+            break;
+        }
+    }
+
+output:
+    r->headers_out.status = NGX_HTTP_OK;
+    r->headers_out.content_length_n = b->last - b->pos;
+
+    b->last_buf = 1;
+
+    rc = ngx_http_send_header(r);
+
+    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+        return rc;
+    }
+
+    return ngx_http_output_filter(r, &out);
 }
 
 
@@ -306,8 +459,8 @@ static void
 ngx_http_limit_access_rbtree_insert_value(ngx_rbtree_node_t *temp,
     ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel)
 {
-    ngx_rbtree_node_t          **p;
-    ngx_http_limit_access_node_t   *lrn, *lrnt;
+    ngx_rbtree_node_t             **p;
+    ngx_http_limit_access_node_t   *lan, *lant;
 
     for ( ;; ) {
 
@@ -321,10 +474,10 @@ ngx_http_limit_access_rbtree_insert_value(ngx_rbtree_node_t *temp,
 
         } else { /* node->key == temp->key */
 
-            lrn = (ngx_http_limit_access_node_t *) &node->color;
-            lrnt = (ngx_http_limit_access_node_t *) &temp->color;
+            lan = (ngx_http_limit_access_node_t *) &node->color;
+            lant = (ngx_http_limit_access_node_t *) &temp->color;
 
-            p = (ngx_memn2cmp(lrn->data, lrnt->data, lrn->len, lrnt->len) < 0)
+            p = (ngx_memn2cmp(lan->data, lant->data, lan->len, lant->len) < 0)
                 ? &temp->left : &temp->right;
         }
 
@@ -344,18 +497,18 @@ ngx_http_limit_access_rbtree_insert_value(ngx_rbtree_node_t *temp,
 
 
 static ngx_int_t
-ngx_http_limit_access_lookup(ngx_http_limit_access_conf_t *lrcf, ngx_uint_t hash,
-    u_char *data, size_t len, ngx_http_limit_access_node_t **lrp)
+ngx_http_limit_access_lookup(ngx_http_limit_access_conf_t *lacf, ngx_uint_t hash,
+    u_char *data, size_t len, ngx_http_limit_access_node_t **lap)
 {
-    ngx_int_t                   rc, excess;
-    ngx_time_t                 *tp;
-    ngx_msec_t                  now;
-    ngx_msec_int_t              ms;
-    ngx_rbtree_node_t          *node, *sentinel;
+    ngx_int_t                      rc, excess;
+    ngx_time_t                    *tp;
+    ngx_msec_t                     now;
+    ngx_msec_int_t                 ms;
+    ngx_rbtree_node_t             *node, *sentinel;
     ngx_http_limit_access_ctx_t   *ctx;
-    ngx_http_limit_access_node_t  *lr;
+    ngx_http_limit_access_node_t  *la;
 
-    ctx = lrcf->shm_zone->data;
+    ctx = lacf->shm_zone->data;
 
     node = ctx->sh->rbtree.root;
     sentinel = ctx->sh->rbtree.sentinel;
@@ -375,32 +528,32 @@ ngx_http_limit_access_lookup(ngx_http_limit_access_conf_t *lrcf, ngx_uint_t hash
         /* hash == node->key */
 
         do {
-            lr = (ngx_http_limit_access_node_t *) &node->color;
+            la = (ngx_http_limit_access_node_t *) &node->color;
 
-            rc = ngx_memn2cmp(data, lr->data, len, (size_t) lr->len);
+            rc = ngx_memn2cmp(data, la->data, len, (size_t) la->len);
 
             if (rc == 0) {
 
                 tp = ngx_timeofday();
 
                 now = (ngx_msec_t) (tp->sec * 1000 + tp->msec);
-                ms = (ngx_msec_int_t) (now - lr->last);
+                ms = (ngx_msec_int_t) (now - la->last);
 
-                excess = lr->excess - ctx->rate * ngx_abs(ms) / 1000 + 1000;
+                excess = la->excess - ctx->rate * ngx_abs(ms) / 1000 + 1000;
 
                 if (excess < 0) {
                     excess = 0;
                 }
 
-                if ((ngx_uint_t) excess > lrcf->burst) {
-                    *lrp = lr;
+                if ((ngx_uint_t) excess > lacf->burst) {
+                    *lap = la;
                     return NGX_BUSY;
                 }
 
-                lr->excess = excess;
-                lr->last = now;
+                la->excess = excess;
+                la->last = now;
 
-                *lrp = lr;
+                *lap = la;
 
                 if (excess) {
                     return NGX_AGAIN;
@@ -416,7 +569,7 @@ ngx_http_limit_access_lookup(ngx_http_limit_access_conf_t *lrcf, ngx_uint_t hash
         break;
     }
 
-    *lrp = NULL;
+    *lap = NULL;
 
     return NGX_DECLINED;
 }
@@ -425,13 +578,13 @@ ngx_http_limit_access_lookup(ngx_http_limit_access_conf_t *lrcf, ngx_uint_t hash
 static void
 ngx_http_limit_access_expire(ngx_http_limit_access_ctx_t *ctx, ngx_uint_t n)
 {
-    ngx_int_t                   excess;
-    ngx_time_t                 *tp;
-    ngx_msec_t                  now;
-    ngx_queue_t                *q;
-    ngx_msec_int_t              ms;
-    ngx_rbtree_node_t          *node;
-    ngx_http_limit_access_node_t  *lr;
+    ngx_int_t                      excess;
+    ngx_time_t                    *tp;
+    ngx_msec_t                     now;
+    ngx_queue_t                   *q;
+    ngx_msec_int_t                 ms;
+    ngx_rbtree_node_t             *node;
+    ngx_http_limit_access_node_t  *la;
 
     tp = ngx_timeofday();
 
@@ -451,18 +604,18 @@ ngx_http_limit_access_expire(ngx_http_limit_access_ctx_t *ctx, ngx_uint_t n)
 
         q = ngx_queue_last(&ctx->sh->queue);
 
-        lr = ngx_queue_data(q, ngx_http_limit_access_node_t, queue);
+        la = ngx_queue_data(q, ngx_http_limit_access_node_t, queue);
 
         if (n++ != 0) {
 
-            ms = (ngx_msec_int_t) (now - lr->last);
+            ms = (ngx_msec_int_t) (now - la->last);
             ms = ngx_abs(ms);
 
             if (ms < 60000) {
                 return;
             }
 
-            excess = lr->excess - ctx->rate * ms / 1000;
+            excess = la->excess - ctx->rate * ms / 1000;
 
             if (excess > 0) {
                 return;
@@ -472,7 +625,7 @@ ngx_http_limit_access_expire(ngx_http_limit_access_ctx_t *ctx, ngx_uint_t n)
         ngx_queue_remove(q);
 
         node = (ngx_rbtree_node_t *)
-                   ((u_char *) lr - offsetof(ngx_rbtree_node_t, color));
+                   ((u_char *) la - offsetof(ngx_rbtree_node_t, color));
 
         ngx_rbtree_delete(&ctx->sh->rbtree, node);
 
@@ -481,12 +634,32 @@ ngx_http_limit_access_expire(ngx_http_limit_access_ctx_t *ctx, ngx_uint_t n)
 }
 
 
+static ngx_http_variable_t *
+ngx_http_get_my_variable(ngx_http_request_t *r, ngx_uint_t index)
+{
+    ngx_http_variable_t        *v;
+    ngx_http_core_main_conf_t  *cmcf;
+
+    cmcf = ngx_http_get_module_main_conf(r, ngx_http_core_module);
+
+    if (cmcf->variables.nelts <= index) {
+        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
+                      "unknown variable index: %d", index);
+        return NULL;
+    }
+
+    v = cmcf->variables.elts;
+
+    return &v[index];
+}
+
+
 static ngx_int_t
 ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 {
     ngx_http_limit_access_ctx_t  *octx = data;
 
-    size_t                     len;
+    size_t                        len;
     ngx_http_limit_access_ctx_t  *ctx;
 
     ctx = shm_zone->data;
@@ -587,12 +760,12 @@ ngx_http_limit_access_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 static char *
 ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    u_char                    *p;
-    size_t                     size, len;
-    ngx_str_t                 *value, name, s;
-    ngx_int_t                  rate, scale;
-    ngx_uint_t                 i;
-    ngx_shm_zone_t            *shm_zone;
+    u_char                       *p;
+    size_t                        size, len;
+    ngx_str_t                    *value, name, s;
+    ngx_int_t                     rate, scale;
+    ngx_uint_t                    i;
+    ngx_shm_zone_t               *shm_zone;
     ngx_http_limit_access_ctx_t  *ctx;
 
     value = cf->args->elts;
@@ -707,7 +880,7 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         ctx = shm_zone->data;
 
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                   "limit_access_zone \"%V\" is already bound to variable \"%V\"",
+                   "limit_access_zone \"%V\" is alaeady bound to variable \"%V\"",
                    &value[1], &ctx->var);
         return NGX_CONF_ERROR;
     }
@@ -722,13 +895,13 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static char *
 ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_http_limit_access_conf_t  *lrcf = conf;
+    ngx_http_limit_access_conf_t  *lacf = conf;
 
     ngx_int_t    burst;
     ngx_str_t   *value, s;
     ngx_uint_t   i;
 
-    if (lrcf->shm_zone) {
+    if (lacf->shm_zone) {
         return "is duplicate";
     }
 
@@ -743,9 +916,9 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             s.len = value[i].len - 5;
             s.data = value[i].data + 5;
 
-            lrcf->shm_zone = ngx_shared_memory_add(cf, &s, 0,
+            lacf->shm_zone = ngx_shared_memory_add(cf, &s, 0,
                                                    &ngx_http_limit_access_module);
-            if (lrcf->shm_zone == NULL) {
+            if (lacf->shm_zone == NULL) {
                 return NGX_CONF_ERROR;
             }
 
@@ -765,7 +938,7 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         }
 
         if (ngx_strncmp(value[i].data, "nodelay", 7) == 0) {
-            lrcf->nodelay = 1;
+            lacf->nodelay = 1;
             continue;
         }
 
@@ -774,21 +947,56 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    if (lrcf->shm_zone == NULL) {
+    if (lacf->shm_zone == NULL) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "\"%V\" must have \"zone\" parameter",
                            &cmd->name);
         return NGX_CONF_ERROR;
     }
 
-    if (lrcf->shm_zone->data == NULL) {
+    if (lacf->shm_zone->data == NULL) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "unknown limit_access_zone \"%V\"",
-                           &lrcf->shm_zone->shm.name);
+                           &lacf->shm_zone->shm.name);
         return NGX_CONF_ERROR;
     }
 
-    lrcf->burst = burst * 1000;
+    lacf->burst = burst * 1000;
+
+    return NGX_CONF_OK;
+}
+
+
+static char *ngx_http_limit_access_status(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_str_t   *value, s;
+
+    ngx_http_core_loc_conf_t      *clcf;
+    ngx_http_limit_access_conf_t  *lacf = conf;
+
+    if (lacf->shm_zone) {
+        return "is duplicate";
+    }
+
+    value = cf->args->elts;
+
+    if (ngx_strncmp(value[1].data, "zone=", 5) == 0) {
+
+        s.len = value[1].len - 5;
+        s.data = value[1].data + 5;
+
+        lacf->shm_zone = ngx_shared_memory_add(cf, &s, 0,
+                &ngx_http_limit_access_module);
+        if (lacf->shm_zone == NULL) {
+            return NGX_CONF_ERROR;
+        }
+    }
+    else {
+        return "should set the zone's name.";
+    }
+
+    clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
+    clcf->handler = ngx_http_limit_access_status_handler;
 
     return NGX_CONF_OK;
 }
