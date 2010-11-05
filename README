@@ -1,10 +1,29 @@
-==INSTALLATION==
+==PLAN==
 
-==EXAMPLE==
+My module is developing at present. My plan is the module can deny custom ip or uri.
 
+The IPs will be stored in a shared memory hash table. When the module is enabled, Nginx will do action like the ngx_http_access_module, deny any specific IP.
 
-==DIRECTIVES==
+The ban IP list is controlled by a remote server. The server can analyze and get the attack ip list. This part is difficult actually. Or you can analyze the access.log yourself and give the ban IP list.
 
+The ban list is sent by a POST HTTP request. The request's content-type is application/x-www-form-urlencoded. The content is like this:
+
+ban_type=ip&ban_expire=3600&ban_list=192.168.1.1,192.168.1.2
+
+The initial parameters' specification is:
+ban_type: the type of ban_list.
+ban_expire: the expire time for the ban list.
+ban_list: the ban list, the ipv4 address can also be sent by a binary form.
+
+free_type: the type of free_list.
+free_list: free the ban list, the IP will not be denied any more.
+
+show_type: the type of show_list.
+show_list: show the current ban IP list.
+
+I'll add these to the README, there maybe some modifications in future.
+
+Waiting for any suggestion.
 
 ==CONTACT==
 Reporting a bug
