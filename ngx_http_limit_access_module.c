@@ -536,8 +536,8 @@ limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)
             }
 
             if (is_binary) {
-                ip = ngx_atoui(start, pos - start);
-                if (ip == (ngx_uint_t)NGX_ERROR) {
+                ip = (in_addr_t)ngx_atoui(start, pos - start);
+                if (ip == (in_addr_t)NGX_ERROR) {
                     goto fail;
                 }
             }
@@ -703,8 +703,8 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value)
             }
 
             if (is_binary) {
-                ip = ngx_atoui(start, pos - start);
-                if (ip == (ngx_uint_t)NGX_ERROR) {
+                ip = (in_addr_t)ngx_atoui(start, pos - start);
+                if (ip == (in_addr_t)NGX_ERROR) {
                     goto fail;
                 }
             }
