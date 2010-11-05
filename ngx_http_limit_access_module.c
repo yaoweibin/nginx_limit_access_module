@@ -524,7 +524,7 @@ limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)
                 pos = last;
             }
 
-            ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                     "limit_access: string_ban_ip=\"%*s\"", pos - start, start);
 
             if (!is_binary) {
