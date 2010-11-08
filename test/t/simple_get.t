@@ -257,11 +257,14 @@ server {
     listen       1982;
     server_name  localhost;
 
+    limit_access_variable zone=one $limit_access_deny;
     location / {
         root   html;
         index  index.html index.htm;
 
-        limit_access  zone=one;
+        if ($limit_access_deny) {
+            return 403;
+        }
     }
 
     location /limit_interface {
@@ -313,11 +316,14 @@ server {
     listen       1982;
     server_name  localhost;
 
+    limit_access_variable zone=one $limit_access_deny;
     location / {
         root   html;
         index  index.html index.htm;
 
-        limit_access  zone=one;
+        if ($limit_access_deny) {
+            return 403;
+        }
     }
 
     location /limit_interface {
@@ -331,4 +337,3 @@ server {
 --- request 
 GET /
 --- response_body_like: .*
-
