@@ -1,31 +1,189 @@
-==PLAN==
+Name
+    nginx_limit_access_module - support to deny specific IP with HTTP POST
+    interfafce
 
-My module is developing at present. My plan is the module can deny custom ip or uri.
+Status
+    This module is at its very early phase of development and considered
+    highly experimental. But you're encouraged to test it out on your side
+    and report any quirks that you experience.
 
-The IPs will be stored in a shared memory hash table. When the module is enabled, Nginx will do action like the ngx_http_access_module, deny any specific IP.
+    We need your help! If you find this module useful and/or interesting,
+    please consider joining the development!
 
-The ban IP list is controlled by a remote server. The server can analyze and get the attack ip list. This part is difficult actually. Or you can analyze the access.log yourself and give the ban IP list.
+Synopsis
+    http {
 
-The ban list is sent by a POST HTTP request. The request's content-type is application/x-www-form-urlencoded. The content is like this:
+        limit_access_zone  zone=one:5m bucket_number=10007;
 
-ban_type=ip&ban_expire=3600&ban_list=192.168.1.1,192.168.1.2
+        server {
+            listen       80;
+            server_name  localhost;
 
-The initial parameters' specification is:
-ban_type: the type of ban_list.
-ban_expire: the expire time for the ban list.
-ban_list: the ban list, the ipv4 address can also be sent by a binary form.
+            limit_access_variable zone=one $limit_access_deny;
 
-free_type: the type of free_list.
-free_list: free the ban list, the IP will not be denied any more.
+            location /variable {
+                alias   html;
+                index  index.html index.htm;
 
-show_type: the type of show_list.
-show_list: show the current ban IP list.
+                if ($limit_access_deny) {
+                    return 403;
+                }
+            }
 
-I'll add these to the README, there maybe some modifications in future.
+            location /limit_interface {
+                limit_access_interface zone=one;
+            }
+        }
+    }
 
-Waiting for any suggestion.
+Description
+    This module can deny specific IP with HTTP POST interfafce.
 
-==CONTACT==
-Reporting a bug
-Questions/patches may be directed to Weibin Yao, yaoweibin@gmail.com.
+Directives
+  limit_access_zone
+    syntax: *limit_access_zone zone=name:size [bucket_number=number];*
+
+    default: *none*
+
+    context: *http*
+
+    The directive describes the area, which stores the record of the limit
+    hash table. Example of usage:
+
+    limit_access_zone zone=one:5m bucket_number=10007;
+
+    In this case, the hash table is allocated 10MB as a zone called "one".
+    The hash table's bucket number is 10007. We can get the record's key of
+    this hash table from the remainder $binary_remote_addr with
+    bucket_number.
+
+    Each record's size is about 32 bytes. If you have a 5M zone, it can hold
+    about 100k+ records.
+
+  limit_access_interface
+    syntax: *limit_access_interface zone=name;*
+
+    default: *none*
+
+    context: *server, location*
+
+    This directive set the interface location where you can add or delete
+    the deny ip address list. See the section of Interface for detail.
+
+  limit_access
+    syntax: *limit_access zone=name;*
+
+    default: *none*
+
+    context: *server, location*
+
+    This directive set the location where you can deny specific ip address
+    from the zone's record. The deny action is the same as the
+    nginx_http_access_module (<http://wiki.nginx.org/HttpAccessModule>). It
+    will look up the zone's hash table. If it find the request's IP is in
+    the hash table and it's not expired, then return 403.
+
+  limit_access_variable
+    syntax: *limit_access_variable zone=name $limit_access_variable_name;*
+
+    default: *none*
+
+    context: *server, location*
+
+    This directive set the name of variable and the zone attached with the
+    variable. When you access this variable, the varibale will do like the
+    limit_access directive. It will look up the zone's hash table. If it
+    finds the request's IP is in the hash table and it's not expired, then
+    the value is '1'. If not, the value is null.
+
+Interface
+    The request sent to the interface location's method is POST, and the
+    content-type is application/x-www-form-urlencoded. The content is like
+    this:
+
+    ban_type=ip&ban_expire=3600&ban_list=192.168.1.1,192.168.1.2
+
+    The parameters' specification is:
+
+    ban_type: the type of ban_list.
+
+    ban_expire: the expire time for the ban list.
+
+    ban_list: the ban list, the ipv4 address can also be sent by a binary
+    form.
+
+    free_type: the type of free_list.
+
+    free_list: free the ban list, the IP will not be denied any more.
+
+    show_type: the type of show_list.
+
+    show_list: show the current ban IP list. You can get the current's ban
+    list like this:
+
+    show_type=ip&show_list
+
+    destory_list: invalidate all the current ban IP, then all the client
+    request is allowed.
+
+    expire_list: free all the expired record's memory. If there is not
+    enough shared memory to store the record, you can use this parameter.
+
+Installation
+    Download the latest version of the release tarball of this module from
+    github (<http://github.com/yaoweibin/nginx_limit_access_module>)
+
+    Grab the nginx source code from nginx.org (<http://nginx.org/>), for
+    example, the version 0.8.53 (see nginx compatibility), and then build
+    the source with this module:
+
+        $ wget 'http://nginx.org/download/nginx-0.8.53.tar.gz'
+        $ tar -xzvf nginx-0.8.53.tar.gz
+        $ cd nginx-0.8.53/
+
+        $ ./configure --add-module=/path/to/nginx_limit_access_module
+
+        $ make
+        $ make install
+
+Compatibility
+    My test bed 0.8.53.
+
+TODO
+Known Issues
+    Developing
+
+Changelogs
+  v0.1
+    first release
+
+Authors
+    Weibin Yao(姚伟斌) *yaoweibin AT gmail DOT com*
+
+License
+    This README template is from agentzh (<http://github.com/agentzh>).
+
+    This module is licensed under the BSD license.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are
+    met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+    IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+    TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+    HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+    TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 

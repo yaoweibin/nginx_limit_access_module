@@ -135,7 +135,7 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=ip&free_list=127.0.0.1,127.1.1.1"
+"free_type=ip&free_list=127.0.0.1,127.1.1.1"
 --- response_body_like: free ip list succeed
 
 === TEST 5: the following get test
@@ -246,7 +246,7 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=ip&expire_list"
+"expire_list"
 --- response_body_like: Ban hash table expired.
 
 === TEST 9: the following get test
@@ -280,7 +280,38 @@ GET /
 --- error_code: 403
 --- response_body_like: .*
 
-=== TEST 10: the destory_list test
+=== TEST 10: the show_list test
+--- no_manager
+--- config
+limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
+server {
+    listen       1982;
+    server_name  localhost;
+
+    limit_access_variable zone=one $limit_access_deny;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+
+    location /limit_status {
+        limit_access_status zone=one;
+    }
+}
+--- request eval
+"POST /limit_interface\n\n" . 
+"show_type=ip&show_list"
+--- response_body_like: ^Ban hash table:(.*)key(.*)$
+
+=== TEST 11: the destory_list test
 --- no_manager
 --- config
 limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
@@ -305,10 +336,10 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=ip&destory_list"
+"destory_list"
 --- response_body_like: Ban hash table destoryed.
 
-=== TEST 11: the following get test
+=== TEST 12: the following get test
 --- no_manager
 --- config
 limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
@@ -337,3 +368,35 @@ server {
 --- request 
 GET /
 --- response_body_like: .*
+
+=== TEST 13: the show_list test
+--- no_manager
+--- config
+limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
+server {
+    listen       1982;
+    server_name  localhost;
+
+    limit_access_variable zone=one $limit_access_deny;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+
+    location /limit_status {
+        limit_access_status zone=one;
+    }
+}
+--- request eval
+"POST /limit_interface\n\n" . 
+"show_type=ip&show_list"
+--- response_body_like: ^Ban hash table:$
+
