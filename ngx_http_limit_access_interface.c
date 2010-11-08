@@ -27,7 +27,6 @@ static ngx_int_t ngx_http_limit_access_destory_list(ngx_http_request_t *r,
 static ngx_int_t ngx_http_limit_access_expire_list(ngx_http_request_t *r, 
         ngx_http_limit_access_ctx_t *ctx);
 
-
 static ngx_http_limit_access_directive_t directives[] = {
     { ngx_string("ban_type"),     NULL },
     { ngx_string("ban_expire"),   limit_access_ban_expire },
@@ -40,7 +39,6 @@ static ngx_http_limit_access_directive_t directives[] = {
     { ngx_string("expire_list"),  limit_access_expire_list },
     { ngx_null_string, NULL }
 };
-
 
 
 void
@@ -294,6 +292,7 @@ limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value)
 
     return NGX_OK;
 }
+
 
 static ngx_int_t 
 limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)

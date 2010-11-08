@@ -96,6 +96,25 @@ Directives
     finds the request's IP is in the hash table and it's not expired, then
     the value is '1'. If not, the value is null.
 
+  limit_access_default_expire
+    syntax: *limit_access_default_expire expire_time;*
+
+    default: *1d*
+
+    context: *http, server, location*
+
+    Set the default expire time for the ban list record. Default expire time
+    is 1 day.
+
+  limit_access_log_level
+    syntax: *limit_access_log_level info|notice|warn|error;*
+
+    default: *limit_access_log_level error*
+
+    context: *server, location*
+
+    Controls the log level of the request deny message.
+
 Interface
     The request sent to the interface location's method is POST, and the
     content-type is application/x-www-form-urlencoded. The content is like

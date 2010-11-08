@@ -1,6 +1,7 @@
 
 #include "ngx_http_limit_access_module.h"
 
+
 static ngx_int_t ngx_http_limit_access_interface_handler(ngx_http_request_t *r);
 static ngx_int_t ngx_http_limit_access_handler(ngx_http_request_t *r);
 static ngx_int_t ngx_http_limit_access_status_handler(ngx_http_request_t *r);
@@ -45,6 +46,13 @@ static ngx_command_t  ngx_http_limit_access_commands[] = {
       ngx_http_limit_access,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
+      NULL },
+
+    { ngx_string("limit_access_default_expire"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_sec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_limit_access_conf_t, default_expire),
       NULL },
 
     { ngx_string("limit_access_interface"),
@@ -436,9 +444,7 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_limit_access_conf_t  *lacf = conf;
 
-    time_t       expire;
-    ngx_str_t   *value, name, s;
-    ngx_uint_t   i;
+    ngx_str_t   *value, name;
 
     if (lacf->shm_zone) {
         return "is duplicate";
@@ -446,38 +452,21 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
-    /* 1 day = 60 * 60 * 24 */
-    expire = 60 * 60 * 24;
-    name.len = 0;
+    if (ngx_strncmp(value[1].data, "zone=", 5) == 0) {
 
-    for (i = 1; i < cf->args->nelts; i++) {
-        if (ngx_strncmp(value[i].data, "zone=", 5) == 0) {
-            name.len = value[i].len - 5;
-            name.data = value[i].data + 5;
-        }
+        name.len = value[1].len - 5;
+        name.data = value[1].data + 5;
 
-        if (ngx_strncmp(value[i].data, "expire=", 7) == 0) {
-            s.len = value[i].len - 7;
-            s.data = value[i].data + 7;
-
-            expire = ngx_parse_time(&s, 1);
-            if (expire == (time_t) NGX_ERROR) {
-                return NGX_CONF_ERROR;
-            }
+        lacf->shm_zone = ngx_shared_memory_add(cf, &name, 0,
+                &ngx_http_limit_access_module);
+        if (lacf->shm_zone == NULL) {
+            return NGX_CONF_ERROR;
         }
     }
-
-    if (name.len == 0) {
+    else {
         return "should set the zone's name.";
     }
 
-    lacf->shm_zone = ngx_shared_memory_add(cf, &name, 0,
-            &ngx_http_limit_access_module);
-    if (lacf->shm_zone == NULL) {
-        return NGX_CONF_ERROR;
-    }
-
-    lacf->default_expire = expire;
     lacf->limit_check = 1;
 
     return NGX_CONF_OK;
@@ -487,7 +476,7 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static char *
 ngx_http_limit_access_interface(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_str_t                     *value, s;
+    ngx_str_t                     *value, name;
     ngx_http_core_loc_conf_t      *clcf;
     ngx_http_limit_access_conf_t  *lacf = conf;
 
@@ -499,10 +488,10 @@ ngx_http_limit_access_interface(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (ngx_strncmp(value[1].data, "zone=", 5) == 0) {
 
-        s.len = value[1].len - 5;
-        s.data = value[1].data + 5;
+        name.len = value[1].len - 5;
+        name.data = value[1].data + 5;
 
-        lacf->shm_zone = ngx_shared_memory_add(cf, &s, 0,
+        lacf->shm_zone = ngx_shared_memory_add(cf, &name, 0,
                 &ngx_http_limit_access_module);
         if (lacf->shm_zone == NULL) {
             return NGX_CONF_ERROR;
@@ -522,7 +511,7 @@ ngx_http_limit_access_interface(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static char *
 ngx_http_limit_access_status(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_str_t                     *value, s;
+    ngx_str_t                     *value, name;
     ngx_http_core_loc_conf_t      *clcf;
     ngx_http_limit_access_conf_t  *lacf = conf;
 
@@ -534,10 +523,10 @@ ngx_http_limit_access_status(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (ngx_strncmp(value[1].data, "zone=", 5) == 0) {
 
-        s.len = value[1].len - 5;
-        s.data = value[1].data + 5;
+        name.len = value[1].len - 5;
+        name.data = value[1].data + 5;
 
-        lacf->shm_zone = ngx_shared_memory_add(cf, &s, 0,
+        lacf->shm_zone = ngx_shared_memory_add(cf, &name, 0,
                 &ngx_http_limit_access_module);
         if (lacf->shm_zone == NULL) {
             return NGX_CONF_ERROR;
