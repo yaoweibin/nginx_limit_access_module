@@ -22,7 +22,7 @@ typedef struct ngx_http_limit_access_bucket_s {
 } ngx_http_limit_access_bucket_t;
 
 typedef struct {
-    ngx_uint_t   valid;
+    ngx_uint_t                      valid;
     ngx_http_limit_access_bucket_t *free;
     ngx_http_limit_access_bucket_t *buckets;
 } ngx_http_limit_access_hash_t;
@@ -45,7 +45,7 @@ typedef ngx_int_t (*ngx_http_limit_access_process_value_pt)
     (ngx_http_request_t *r, ngx_str_t *value);
 
 typedef struct {
-    ngx_str_t name;
+    ngx_str_t                              name;
     ngx_http_limit_access_process_value_pt handler;
 } ngx_http_limit_access_directive_t;
 
@@ -79,7 +79,6 @@ static char * ngx_http_limit_access_interface(ngx_conf_t *cf,
 
 static ngx_int_t ngx_http_limit_access_init(ngx_conf_t *cf);
 
-
 static ngx_int_t limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value);
@@ -109,14 +108,14 @@ static ngx_conf_enum_t  ngx_http_limit_access_log_levels[] = {
 };
 
 static ngx_http_limit_access_directive_t directives[] = {
-    { ngx_string("ban_type"),   NULL },
-    { ngx_string("ban_expire"), limit_access_ban_expire },
-    { ngx_string("ban_list"),   limit_access_ban_list },
-    { ngx_string("free_type"),  NULL },
-    { ngx_string("free_list"),  limit_access_free_list },
-    { ngx_string("show_type"),  NULL },
-    { ngx_string("show_list"),  limit_access_show_list },
-    { ngx_string("destory_list"),  limit_access_destory_list },
+    { ngx_string("ban_type"),     NULL },
+    { ngx_string("ban_expire"),   limit_access_ban_expire },
+    { ngx_string("ban_list"),     limit_access_ban_list },
+    { ngx_string("free_type"),    NULL },
+    { ngx_string("free_list"),    limit_access_free_list },
+    { ngx_string("show_type"),    NULL },
+    { ngx_string("show_list"),    limit_access_show_list },
+    { ngx_string("destory_list"), limit_access_destory_list },
     { ngx_string("expire_list"),  limit_access_expire_list },
     { ngx_null_string, NULL }
 };
@@ -164,14 +163,14 @@ static ngx_command_t  ngx_http_limit_access_commands[] = {
 
 
 static ngx_http_module_t  ngx_http_limit_access_module_ctx = {
-    NULL,                                  /* preconfiguration */
-    ngx_http_limit_access_init,            /* postconfiguration */
+    NULL,                                     /* preconfiguration */
+    ngx_http_limit_access_init,               /* postconfiguration */
 
-    NULL,                                  /* create main configuration */
-    NULL,                                  /* init main configuration */
+    NULL,                                     /* create main configuration */
+    NULL,                                     /* init main configuration */
 
-    NULL,                                  /* create server configuration */
-    NULL,                                  /* merge server configuration */
+    NULL,                                     /* create server configuration */
+    NULL,                                     /* merge server configuration */
 
     ngx_http_limit_access_create_conf,        /* create location configration */
     ngx_http_limit_access_merge_conf          /* merge location configration */
@@ -380,7 +379,6 @@ static ngx_int_t
 ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
 {
     u_char                            *p, *src, *dst;
-
     ngx_str_t                          name;
     ngx_str_t                          value;
     ngx_uint_t                         i;
@@ -585,6 +583,7 @@ ngx_alloc_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx)
     
     if (bucket) {
         hash->free = bucket->next;
+        return bucket;
     }
 
     bucket = ngx_slab_alloc_locked(ctx->shpool,
@@ -724,7 +723,6 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value)
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
     b = request_ctx->buf;
-
     b->last = ngx_snprintf(b->last, b->end - b->last, "free ip list succeed\n");
 
     return NGX_OK;
@@ -1066,7 +1064,8 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
     hash = ctx->sh;
 
     if (!hash->valid) {
-        goto done;
+        ngx_shmtx_unlock(&ctx->shpool->mutex);
+        return NGX_DECLINED;
     }
 
     rc = 0;
@@ -1084,10 +1083,6 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
 
         return NGX_HTTP_FORBIDDEN;
     }
-
-done:
-
-    ngx_shmtx_unlock(&ctx->shpool->mutex);
 
     return NGX_DECLINED;
 }
@@ -1149,10 +1144,9 @@ ngx_http_limit_access_status_handler(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
 {
-    ngx_http_limit_access_ctx_t  *octx = data;
-
     size_t                        len;
     ngx_http_limit_access_ctx_t  *ctx;
+    ngx_http_limit_access_ctx_t  *octx = data;
 
     ctx = shm_zone->data;
 
@@ -1162,6 +1156,7 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
                           "limit_access \"%V\" uses the bucket_number=%d "
                           "while previously it used the bucket_number=%d ",
                           &shm_zone->shm.name, ctx->bucket_number, octx->bucket_number);
+
             return NGX_ERROR;
         }
 
@@ -1196,7 +1191,6 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
             ctx->bucket_number * sizeof(ngx_http_limit_access_bucket_t));
 
     ctx->sh->valid = 1;
-
 
     len = sizeof(" in limit_access zone \"\"") + shm_zone->shm.name.len;
 
@@ -1295,7 +1289,6 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             continue;
         }
 
-
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "invalid parameter \"%V\"", &value[i]);
         return NGX_CONF_ERROR;
@@ -1385,8 +1378,7 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 static char *
 ngx_http_limit_access_interface(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_str_t   *value, s;
-
+    ngx_str_t                     *value, s;
     ngx_http_core_loc_conf_t      *clcf;
     ngx_http_limit_access_conf_t  *lacf = conf;
 
@@ -1420,8 +1412,7 @@ ngx_http_limit_access_interface(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 static char *ngx_http_limit_access_status(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_str_t   *value, s;
-
+    ngx_str_t                     *value, s;
     ngx_http_core_loc_conf_t      *clcf;
     ngx_http_limit_access_conf_t  *lacf = conf;
 
