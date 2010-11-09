@@ -426,7 +426,7 @@ ngx_http_limit_access_ban_ip(ngx_http_request_t *r,
 
     expire = ngx_time() + request_ctx->expire;
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: add ban_ip=%d, expire=%d", ip, expire);
+            "limit_access: add ban_ip=%ud, expire=%T", ip, expire);
 
     do {
         if (bucket->key == key) {
@@ -441,7 +441,7 @@ ngx_http_limit_access_ban_ip(ngx_http_request_t *r,
         }
 
         ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "limit_access: free_list, bucket[%d]=%p, bucket->next=%p", 
+                "limit_access: free_list, bucket[%ud]=%p, bucket->next=%p", 
                 key, bucket, bucket->next);
 
         bucket = bucket->next;
@@ -569,7 +569,7 @@ ngx_http_limit_access_free_ip(ngx_http_request_t *r,
         if (bucket->key == key) {
 
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                    "limit_access: free, ip=%d", key);
+                    "limit_access: free, ip=%ud", key);
 
             bucket->key = 0;
             bucket->expire = 0;
@@ -583,7 +583,7 @@ ngx_http_limit_access_free_ip(ngx_http_request_t *r,
         }
 
         ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "limit_access: free_list, bucket[%d]=%p, bucket->next=%p", 
+                "limit_access: free_list, bucket[%ud]=%p, bucket->next=%p", 
                 key, bucket, bucket->next);
 
         pre = bucket;
@@ -666,17 +666,17 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
                     ngx_http_time(time_buffer, bucket->expire);
 
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "key[%d]: ip=%s(%d), expire=%s\n", 
+                            "key[%ud]: ip=%s(%ud), expire=%s\n", 
                             i, addr_buffer, bucket->key, time_buffer);
                 }
                 else {
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "key[%d]: ip=%s(%d), expire=expired\n", 
+                            "key[%ud]: ip=%s(%ud), expire=expired\n", 
                             i, addr_buffer, bucket->key);
                 }
 
                 ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: show_ip: ip=%s(%d), expire=%s", 
+                        "limit_access: show_ip: ip=%s(%ud), expire=%s", 
                         addr_buffer, bucket->key, time_buffer);
             }
 
@@ -876,7 +876,7 @@ ngx_http_limit_access_lookup_ip(ngx_http_request_t *r, ngx_http_limit_access_ctx
     bucket = &hash->buckets[key % ctx->bucket_number];
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: look_up_ip=%d, now=%T", key, now);
+            "limit_access: look_up_ip=%ud, now=%T", key, now);
 
     do {
         if (bucket->key == key) {

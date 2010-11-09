@@ -136,7 +136,7 @@ free_list: free the ban list, the IP will not be denied any more.
 
 show_type: the type of show_list.
 
-show_list: show the current ban IP list. You can get the current's ban list like this:
+show_list: show the current ban IP list. You can get the current ban list like this:
 
 <geshi>
 show_type=ip&show_list
