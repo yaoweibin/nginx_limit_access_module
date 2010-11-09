@@ -299,13 +299,13 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
     ctx->shpool->data = ctx->sh;
 
     ctx->sh->buckets = ngx_slab_alloc(ctx->shpool, 
-            ctx->bucket_number * sizeof(ngx_http_limit_access_bucket_t));
+            ctx->bucket_number * sizeof(ngx_http_limit_access_bucket_t *));
     if (ctx->sh->buckets == NULL) {
         return NGX_ERROR;
     }
 
     ngx_memzero(ctx->sh->buckets, 
-            ctx->bucket_number * sizeof(ngx_http_limit_access_bucket_t));
+            ctx->bucket_number * sizeof(ngx_http_limit_access_bucket_t *));
 
     ctx->sh->valid = 1;
 
@@ -396,6 +396,9 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             else if (ngx_strncmp(p, "url", len) == 0) {
                 /*TODO*/
                 type = HASH_URL;
+            }
+            else if (ngx_strncmp(p, "host", len) == 0) {
+                type = HASH_HOST;
             }
             else {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,

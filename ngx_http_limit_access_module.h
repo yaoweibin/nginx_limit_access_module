@@ -6,8 +6,9 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#define HASH_IP  0x01
-#define HASH_URL 0x02
+#define HASH_IP   0x01
+#define HASH_URL  0x02
+#define HASH_HOST 0x02
 
 typedef struct {
     time_t      expire;
@@ -25,9 +26,9 @@ typedef struct ngx_http_limit_access_bucket_s {
 } ngx_http_limit_access_bucket_t;
 
 typedef struct {
-    ngx_uint_t                      valid;
-    ngx_http_limit_access_bucket_t *free;
-    ngx_http_limit_access_bucket_t *buckets;
+    ngx_uint_t                       valid;
+    ngx_http_limit_access_bucket_t  *free;
+    ngx_http_limit_access_bucket_t **buckets;
 } ngx_http_limit_access_hash_t;
 
 typedef struct {
