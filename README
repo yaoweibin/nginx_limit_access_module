@@ -52,7 +52,7 @@ Directives
 
     limit_access_zone zone=one:5m bucket_number=10007;
 
-    In this case, the hash table is allocated 10MB as a zone called "one".
+    In this case, the hash table is allocated 5MB as a zone called "one".
     The hash table's bucket number is 10007. We can get the record's key of
     this hash table from the remainder $binary_remote_addr with
     bucket_number.
@@ -104,7 +104,8 @@ Directives
     context: *http, server, location*
 
     Set the default expire time for the ban list record. Default expire time
-    is 1 day.
+    is 1 day. The unit of time can be: s(second,default), m(minute),
+    h(hour), d(day), w(week), M(month), y(year).
 
   limit_access_log_level
     syntax: *limit_access_log_level info|notice|warn|error;*
@@ -126,7 +127,9 @@ Interface
 
     ban_type: the type of ban_list.
 
-    ban_expire: the expire time for the ban list.
+    ban_expire: the expire time for the ban list. The unit of time can be:
+    s(second,default), m(minute), h(hour), d(day), w(week), M(month),
+    y(year).
 
     ban_list: the ban list, the ipv4 address can also be sent by a binary
     form.
