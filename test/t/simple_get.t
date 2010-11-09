@@ -190,7 +190,7 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=ip&ban_list=16843135,16777343"
+"ban_type=ip&ban_list=2130706433,2130772225"
 --- response_body_like: ban ip list succeed
 
 === TEST 7: the following get test
