@@ -22,8 +22,8 @@ http {
 
         limit_access_variable zone=one $limit_access_deny;
 
-        location /variable {
-            alias   html;
+        location / {
+            root   html;
             index  index.html index.htm;
 
             if ($limit_access_deny) {
