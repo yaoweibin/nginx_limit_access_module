@@ -80,7 +80,7 @@ server {
 --- request eval
 "POST /limit_interface\n\n" . 
 "ban_type=ip&ban_list=127.0.0.1,127.1.1.1"
---- response_body_like: ban ip list succeed
+--- response_body_like: ban list succeed
 
 === TEST 3: the following get test
 --- no_manager
@@ -136,7 +136,7 @@ server {
 --- request eval
 "POST /limit_interface\n\n" . 
 "free_type=ip&free_list=127.0.0.1,127.1.1.1"
---- response_body_like: free ip list succeed
+--- response_body_like: free list succeed
 
 === TEST 5: the following get test
 --- no_manager
@@ -190,8 +190,8 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=ip&ban_list=16843135,16777343"
---- response_body_like: ban ip list succeed
+"ban_type=ip&ban_list=2130706433,2130772225"
+--- response_body_like: ban list succeed
 
 === TEST 7: the following get test
 --- no_manager
@@ -308,8 +308,8 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=ip&show_list"
---- response_body_like: ^Ban hash table:(.*)key(.*)$
+"show_type=ip&show_list=2130706433"
+--- response_body_like: ^Ban hash table:(.*)ip(.*)$
 
 === TEST 11: the destory_list test
 --- no_manager
@@ -397,6 +397,6 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=ip&show_list"
---- response_body_like: ^Ban hash table:$
+"show_type=ip&show_list=all"
+--- response_body_like: ^Ban hash table:(.*)total record = 0$
 

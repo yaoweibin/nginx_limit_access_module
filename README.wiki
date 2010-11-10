@@ -1,6 +1,6 @@
 = Name =
 
-'''nginx_limit_access_module''' - support to deny specific IP with HTTP POST interfafce 
+'''nginx_limit_access_module''' - support to deny specific variable with HTTP POST interfafce 
 
 = Status =
 
@@ -14,7 +14,7 @@ We need your help! If you find this module useful and/or interesting, please con
 
 http {
 
-    limit_access_zone  zone=one:5m bucket_number=10007;
+    limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
 
     server {
         listen       80;
@@ -22,8 +22,8 @@ http {
 
         limit_access_variable zone=one $limit_access_deny;
 
-        location /variable {
-            alias   html;
+        location / {
+            root   html;
             index  index.html index.htm;
 
             if ($limit_access_deny) {
@@ -41,13 +41,13 @@ http {
 
 = Description =
 
-This module can deny specific IP with HTTP POST interfafce.
+This module can deny specific variable with HTTP POST interfafce.
 
 = Directives =
 
 == limit_access_zone ==
 
-'''syntax:''' ''limit_access_zone zone=name:size [bucket_number=number];''
+'''syntax:''' ''limit_access_zone zone=name:size [bucket_number=number] [type=ip|$your_variable];''
 
 '''default:''' ''none''
 
@@ -61,7 +61,9 @@ limit_access_zone  zone=one:5m bucket_number=10007;
 
 In this case, the hash table is allocated 5MB as a zone called "one". The hash table's bucket number is 10007. We can get the record's key of this hash table from the remainder $binary_remote_addr with bucket_number. 
 
-Each record's size is about 32 bytes. If you have a 5M zone, it can hold about 100k+ records. 
+If the record is the type of ip, each record's size is about 32 bytes. If you have a 5M zone, it can hold about 100k+ records. 
+
+The type can be 'ip' or any of the variable in Nginx.
 
 == limit_access_interface ==
 
@@ -69,7 +71,7 @@ Each record's size is about 32 bytes. If you have a 5M zone, it can hold about 1
 
 '''default:''' ''none''
 
-'''context:''' ''server, location''
+'''context:''' ''location''
 
 This directive set the interface location where you can add or delete the deny ip address list. See the section of Interface for detail.
 
@@ -79,7 +81,7 @@ This directive set the interface location where you can add or delete the deny i
 
 '''default:''' ''none''
 
-'''context:''' ''server, location''
+'''context:''' ''http, server, location''
 
 This directive set the location where you can deny specific ip address from the zone's record. The deny action is the same as the [http://wiki.nginx.org/HttpAccessModule nginx_http_access_module].
 It will look up the zone's hash table. If it find the request's IP is in the hash table and it's not expired, then return 403.
@@ -90,7 +92,7 @@ It will look up the zone's hash table. If it find the request's IP is in the has
 
 '''default:''' ''none''
 
-'''context:''' ''server, location''
+'''context:''' ''http, server, location''
 
 This directive set the name of variable and the zone attached with the variable. When you access this variable, the varibale will do like the limit_access directive. It will look up the zone's hash table. If it finds the request's IP is in the hash table and it's not expired, then the value is '1'. If not, the value is null.
 
@@ -110,7 +112,7 @@ Set the default expire time for the ban list record. Default expire time is 1 da
 
 '''default:''' ''limit_access_log_level error''
 
-'''context:''' ''server, location''
+'''context:''' ''http, server, location''
 
 Controls the log level of the request deny message.
 
@@ -124,7 +126,7 @@ ban_type=ip&ban_expire=3600&ban_list=192.168.1.1,192.168.1.2
 
 The parameters' specification is:
 
-ban_type: the type of ban_list.
+ban_type: the type of ban_list. It can be: ip, variable.
 
 ban_expire: the expire time for the ban list. The unit of time can be: s(second,default), m(minute), h(hour), d(day), w(week), M(month), y(year).
 
@@ -136,15 +138,19 @@ free_list: free the ban list, the IP will not be denied any more.
 
 show_type: the type of show_list.
 
-show_list: show the current ban IP list. You can get the current's ban list like this:
+show_list: show the ban IP list. You can get the sepcific ban list like this:
 
 <geshi>
-show_type=ip&show_list
+show_type=ip&show_list=127.0.0.1,127.1.1.1
+</geshi>
+
+If you want to show all the current ban IP list, You can do like this:
+
+<geshi>
+show_type=ip&show_list=all
 </geshi>
 
 destory_list: invalidate all the current ban IP, then all the client request is allowed.
-
-expire_list: free all the expired record's memory. If there is not enough shared memory to store the record, you can use this parameter.
 
 = Installation =
 
