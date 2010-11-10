@@ -308,8 +308,8 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=ip&show_list"
---- response_body_like: ^Ban hash table:(.*)key(.*)$
+"show_type=ip&show_list=2130706433"
+--- response_body_like: ^Ban hash table:(.*)ip(.*)$
 
 === TEST 11: the destory_list test
 --- no_manager
@@ -397,6 +397,6 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=ip&show_list"
---- response_body_like: ^Ban hash table:$
+"show_type=ip&show_list=all"
+--- response_body_like: ^Ban hash table:(.*)total record = 0$
 
