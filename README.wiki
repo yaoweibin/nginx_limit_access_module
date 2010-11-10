@@ -136,10 +136,15 @@ free_list: free the ban list, the IP will not be denied any more.
 
 show_type: the type of show_list.
 
-show_list: show the current ban IP list. You can get the current ban list like this:
+show_list: show the ban IP list. You can get the sepcific  ban list like this:
 
 <geshi>
-show_type=ip&show_list
+show_type=ip&show_list=127.0.0.1,127.1.1.1
+</geshi>
+
+If you want to show all the current ban IP list, You can do like this:
+<geshi>
+show_type=ip&show_list=all
 </geshi>
 
 destory_list: invalidate all the current ban IP, then all the client request is allowed.

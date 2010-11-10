@@ -618,16 +618,27 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
     if (!hash->valid) {
-
         b->last = ngx_snprintf(b->last, b->end - b->last, "Not invalid ban hash table!");
-        ngx_shmtx_unlock(&ctx->shpool->mutex);
 
+        ngx_shmtx_unlock(&ctx->shpool->mutex);
         return NGX_OK;
     }
 
     b->last = ngx_snprintf(b->last, b->end - b->last, "Ban hash table:\n");
 
     is_binary = 0;
+
+    if (value->len == ) {
+        rc = ngx_http_limit_access_show_ip(r, ctx, b, INADDR_NONE); 
+
+        if (rc == NGX_ERROR) {
+            goto fail;
+        }
+        else {
+            ngx_shmtx_unlock(&ctx->shpool->mutex);
+            return NGX_OK;
+        }
+    }
 
     last = value->data + value->len;
     for (start = pos = value->data; pos < last; pos++) {
@@ -711,7 +722,7 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
     if (ip != INADDR_NONE) {
 
         bucket = &hash->buckets[ip % ctx->bucket_number];
-        ngx_inet_ntop(AF_INET, (void *) &bucket->key, addr_buffer, sizeof(addr_buffer));
+        ngx_inet_ntop(AF_INET, (void *) &ip, addr_buffer, sizeof(addr_buffer));
 
         do {
             if (bucket->key == ip) {
@@ -741,7 +752,7 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
         } while (bucket);
 
         b->last = ngx_snprintf(b->last, b->end - b->last, 
-                "ip=%s(%ud), there is not this record.\n", 
+                "ip=%s(%ud), there is no this record.\n", 
                 addr_buffer, ntohl(ip));
 
         return NGX_OK;
