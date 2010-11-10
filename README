@@ -71,7 +71,7 @@ Directives
     context: *location*
 
     This directive set the interface location where you can add or delete
-    the deny ip address list. See the section of Interface for detail.
+    the deny list. See the section of Interface for detail.
 
   limit_access
     syntax: *limit_access zone=name;*
@@ -80,11 +80,11 @@ Directives
 
     context: *http, server, location*
 
-    This directive set the location where you can deny specific ip address
+    This directive set the location where you can deny specific variable
     from the zone's record. The deny action is the same as the
     nginx_http_access_module (<http://wiki.nginx.org/HttpAccessModule>). It
-    will look up the zone's hash table. If it find the request's IP is in
-    the hash table and it's not expired, then return 403.
+    will look up the zone's hash table. If it find the request's variable is
+    in the hash table and it's not expired, then return 403.
 
   limit_access_variable
     syntax: *limit_access_variable zone=name $limit_access_variable_name;*
@@ -96,8 +96,8 @@ Directives
     This directive set the name of variable and the zone attached with the
     variable. When you access this variable, the varibale will do like the
     limit_access directive. It will look up the zone's hash table. If it
-    finds the request's IP is in the hash table and it's not expired, then
-    the value is '1'. If not, the value is null.
+    finds the request's variable is in the hash table and it's not expired,
+    then the value is '1'. If not, the value is null.
 
   limit_access_default_expire
     syntax: *limit_access_default_expire expire_time;*
@@ -124,7 +124,7 @@ Interface
     content-type is application/x-www-form-urlencoded. The content is like
     this:
 
-    ban_type=ip&ban_expire=3600&ban_list=192.168.1.1,192.168.1.2
+    ban_type=variable&ban_expire=3600&ban_list=192.168.1.1,192.168.1.2
 
     The parameters' specification is:
 
@@ -139,20 +139,20 @@ Interface
 
     free_type: the type of free_list.
 
-    free_list: free the ban list, the IP will not be denied any more.
+    free_list: free the ban list, the variable will not be denied any more.
 
     show_type: the type of show_list.
 
-    show_list: show the ban IP list. You can get the sepcific ban list like
+    show_list: show the ban list. You can get the sepcific ban list like
     this:
 
-    show_type=ip&show_list=127.0.0.1,127.1.1.1
+    show_type=variable&show_list=127.0.0.1,127.1.1.1
 
     If you want to show all the current ban IP list, You can do like this:
 
     show_type=ip&show_list=all
 
-    destory_list: invalidate all the current ban IP, then all the client
+    destory_list: invalidate all the current ban list, then all the client
     request is allowed.
 
 Installation
