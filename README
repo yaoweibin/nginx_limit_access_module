@@ -1,6 +1,6 @@
 Name
-    nginx_limit_access_module - support to deny specific IP with HTTP POST
-    interfafce
+    nginx_limit_access_module - support to deny specific variable with HTTP
+    POST interfafce
 
 Status
     This module is at its very early phase of development and considered
@@ -13,7 +13,7 @@ Status
 Synopsis
     http {
 
-        limit_access_zone  zone=one:5m bucket_number=10007;
+        limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
 
         server {
             listen       80;
@@ -37,11 +37,12 @@ Synopsis
     }
 
 Description
-    This module can deny specific IP with HTTP POST interfafce.
+    This module can deny specific variable with HTTP POST interfafce.
 
 Directives
   limit_access_zone
-    syntax: *limit_access_zone zone=name:size [bucket_number=number];*
+    syntax: *limit_access_zone zone=name:size [bucket_number=number]
+    [type=ip|$your_variable];*
 
     default: *none*
 
@@ -57,15 +58,17 @@ Directives
     this hash table from the remainder $binary_remote_addr with
     bucket_number.
 
-    Each record's size is about 32 bytes. If you have a 5M zone, it can hold
-    about 100k+ records.
+    If the record is the type of ip, each record's size is about 32 bytes.
+    If you have a 5M zone, it can hold about 100k+ records.
+
+    The type can be 'ip' or any of the variable in Nginx.
 
   limit_access_interface
     syntax: *limit_access_interface zone=name;*
 
     default: *none*
 
-    context: *server, location*
+    context: *location*
 
     This directive set the interface location where you can add or delete
     the deny ip address list. See the section of Interface for detail.
@@ -75,7 +78,7 @@ Directives
 
     default: *none*
 
-    context: *server, location*
+    context: *http, server, location*
 
     This directive set the location where you can deny specific ip address
     from the zone's record. The deny action is the same as the
@@ -88,7 +91,7 @@ Directives
 
     default: *none*
 
-    context: *server, location*
+    context: *http, server, location*
 
     This directive set the name of variable and the zone attached with the
     variable. When you access this variable, the varibale will do like the
@@ -112,7 +115,7 @@ Directives
 
     default: *limit_access_log_level error*
 
-    context: *server, location*
+    context: *http, server, location*
 
     Controls the log level of the request deny message.
 
@@ -125,7 +128,7 @@ Interface
 
     The parameters' specification is:
 
-    ban_type: the type of ban_list.
+    ban_type: the type of ban_list. It can be: ip, variable.
 
     ban_expire: the expire time for the ban list. The unit of time can be:
     s(second,default), m(minute), h(hour), d(day), w(week), M(month),
