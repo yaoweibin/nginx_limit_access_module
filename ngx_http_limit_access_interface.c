@@ -628,7 +628,7 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
 
     is_binary = 0;
 
-    if (value->len == ) {
+    if (value->len == 0) {
         rc = ngx_http_limit_access_show_ip(r, ctx, b, INADDR_NONE); 
 
         if (rc == NGX_ERROR) {
