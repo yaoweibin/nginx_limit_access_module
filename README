@@ -146,13 +146,11 @@ Interface
     show_type=ip&show_list=127.0.0.1,127.1.1.1
 
     If you want to show all the current ban IP list, You can do like this:
+
     show_type=ip&show_list=all
 
     destory_list: invalidate all the current ban IP, then all the client
     request is allowed.
-
-    expire_list: free all the expired record's memory. If there is not
-    enough shared memory to store the record, you can use this parameter.
 
 Installation
     Download the latest version of the release tarball of this module from
