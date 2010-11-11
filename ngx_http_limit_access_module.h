@@ -54,11 +54,6 @@ typedef struct {
     ngx_http_limit_access_process_value_pt handler;
 } ngx_http_limit_access_directive_t;
 
-ngx_http_limit_access_bucket_t *ngx_alloc_limit_access_bucket(
-        ngx_http_limit_access_ctx_t *ctx, size_t len);
-void ngx_free_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx,
-        ngx_http_limit_access_bucket_t **p);
-
 void ngx_http_limit_access_process_handler(ngx_http_request_t *r);
 
 ngx_int_t ngx_http_limit_access_lookup_ip(ngx_http_request_t *r, 
