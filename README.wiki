@@ -10,11 +10,13 @@ We need your help! If you find this module useful and/or interesting, please con
 
 = Synopsis =
 
+== a simple deny ip example: ==
+
 <geshi lang="nginx">
 
 http {
 
-    limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
+    limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
 
     server {
         listen       80;
@@ -40,6 +42,53 @@ http {
 }
 
 </geshi>
+
+== both deny $remote_addr and $host example: ==
+
+<geshi lang="nginx">
+
+http {
+
+    limit_access_zone  zone=addr:5m bucket_number=10007 type=$remote_addr;
+    limit_access_zone  zone=host:5m bucket_number=10007 type=$host;
+
+    server {
+        listen       80;
+        server_name  _;
+
+        limit_access_variable zone=addr $limit_access_deny_addr;
+        limit_access_variable zone=host $limit_access_deny_host;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+
+            if ($limit_access_deny_addr) {
+                return 403;
+            }
+
+            if ($limit_access_deny_host) {
+                return 403;
+            }
+        }
+
+        location /limit_interface_addr {
+            allow   192.168.1.0/24;
+            deny all;
+            limit_access_interface zone=addr;
+        }
+
+        location /limit_interface_host {
+            allow   192.168.1.0/24;
+            deny all;
+            limit_access_interface zone=host;
+        }
+    }
+}
+
+</geshi>
+
+
 
 = Description =
 

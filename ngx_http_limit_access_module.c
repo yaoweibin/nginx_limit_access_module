@@ -160,16 +160,9 @@ ngx_http_limit_access_deny_variable(ngx_http_request_t *r,
 {
     ngx_int_t                              rc;
     ngx_http_limit_access_ctx_t           *ctx;
-    ngx_http_limit_access_conf_t          *lacf;
     ngx_http_limit_access_hash_t          *hash;
 
-    lacf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
-
-    if (lacf->shm_zone == NULL) {
-        goto not_found;
-    }
-
-    ctx = lacf->shm_zone->data;
+    ctx = (ngx_http_limit_access_ctx_t *)data;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
             "limit_access_deny_variable");
@@ -572,6 +565,10 @@ ngx_http_limit_access_variable(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_limit_access_conf_t  *lacf = conf;
 
     value = cf->args->elts;
+
+    name.len = 0;
+    v = NULL;
+
     for (i = 1; i < cf->args->nelts; i++) {
         if (ngx_strncmp(value[i].data, "zone=", 5) == 0) {
             name.len = value[i].len - 5;
@@ -595,11 +592,17 @@ ngx_http_limit_access_variable(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return "should set the zone's name.";
     }
 
+    if (v == NULL) {
+        return "should set the variable's name.";
+    }
+
     lacf->shm_zone = ngx_shared_memory_add(cf, &name, 0,
             &ngx_http_limit_access_module);
     if (lacf->shm_zone == NULL) {
         return NGX_CONF_ERROR;
     }
+
+    v->data = (uintptr_t) lacf->shm_zone->data;
 
     return NGX_CONF_OK;
 }
