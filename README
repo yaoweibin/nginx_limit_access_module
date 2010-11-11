@@ -31,13 +31,15 @@ Synopsis
             }
 
             location /limit_interface {
+                allow   192.168.1.0/24;
+                deny all;
                 limit_access_interface zone=one;
             }
         }
     }
 
 Description
-    This module can deny specific variable with HTTP POST interfafce.
+    This module can deny specific variable with HTTP POST interface.
 
 Directives
   limit_access_zone
@@ -61,7 +63,9 @@ Directives
     If the record is the type of ip, each record's size is about 32 bytes.
     If you have a 5M zone, it can hold about 100k+ records.
 
-    The type can be 'ip' or any of the variable in Nginx.
+    The type can be 'ip' or any of the variable in Nginx. I use the 'ip' as
+    a sepecial variable because I treat the ip as an interger. This can save
+    some storage memory. Otherwise, I treat all the variable to be string.
 
   limit_access_interface
     syntax: *limit_access_interface zone=name;*
@@ -94,7 +98,7 @@ Directives
     context: *http, server, location*
 
     This directive set the name of variable and the zone attached with the
-    variable. When you access this variable, the varibale will do like the
+    variable. When you access this variable, the variable will do like the
     limit_access directive. It will look up the zone's hash table. If it
     finds the request's variable is in the hash table and it's not expired,
     then the value is '1'. If not, the value is null.
@@ -117,10 +121,10 @@ Directives
 
     context: *http, server, location*
 
-    Controls the log level of the request deny message.
+    Control the log level of the request deny message.
 
 Interface
-    The request sent to the interface location's method is POST, and the
+    The request method sent to the interface location is POST, and the
     content-type is application/x-www-form-urlencoded. The content is like
     this:
 
@@ -143,7 +147,7 @@ Interface
 
     show_type: the type of show_list.
 
-    show_list: show the ban list. You can get the sepcific ban list like
+    show_list: show the ban list. You can get the specific ban list like
     this:
 
     show_type=variable&show_list=127.0.0.1,127.1.1.1
