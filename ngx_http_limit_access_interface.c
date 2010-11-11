@@ -17,7 +17,7 @@ static ngx_int_t limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value
 static ngx_int_t limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value);
-static ngx_int_t limit_access_destory_list(ngx_http_request_t *r, ngx_str_t *value);
+static ngx_int_t limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_expire_list(ngx_http_request_t *r, ngx_str_t *value);
 
 static ngx_int_t ngx_http_limit_access_ban_ip(ngx_http_request_t *r, 
@@ -34,7 +34,7 @@ static ngx_int_t ngx_http_limit_access_free_variable(ngx_http_request_t *r,
 static ngx_int_t ngx_http_limit_access_show_variable(ngx_http_request_t *r, 
         ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, ngx_str_t *variable);
 
-static ngx_int_t ngx_http_limit_access_destory_list(ngx_http_request_t *r, 
+static ngx_int_t ngx_http_limit_access_destroy_list(ngx_http_request_t *r, 
         ngx_http_limit_access_ctx_t *ctx);
 static ngx_int_t ngx_http_limit_access_expire_list(ngx_http_request_t *r, 
         ngx_http_limit_access_ctx_t *ctx);
@@ -47,7 +47,7 @@ static ngx_http_limit_access_directive_t directives[] = {
     { ngx_string("free_list"),    limit_access_free_list },
     { ngx_string("show_type"),    limit_access_type },
     { ngx_string("show_list"),    limit_access_show_list },
-    { ngx_string("destory_list"), limit_access_destory_list },
+    { ngx_string("destroy_list"), limit_access_destroy_list },
     { ngx_string("expire_list"),  limit_access_expire_list },
     { ngx_null_string, NULL }
 };
@@ -1128,7 +1128,7 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
 
 
 static ngx_int_t
-limit_access_destory_list(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value)
 {
     ngx_buf_t                             *b;
     ngx_http_limit_access_ctx_t           *ctx;
@@ -1160,18 +1160,18 @@ limit_access_destory_list(ngx_http_request_t *r, ngx_str_t *value)
         return NGX_OK;
     }
 
-    ngx_http_limit_access_destory_list(r, ctx); 
+    ngx_http_limit_access_destroy_list(r, ctx); 
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
-    b->last = ngx_snprintf(b->last, b->end - b->last, "Ban hash table destoryed.\n");
+    b->last = ngx_snprintf(b->last, b->end - b->last, "Ban hash table destroyed.\n");
 
     return NGX_OK;
 }
 
 
 static ngx_int_t 
-ngx_http_limit_access_destory_list(ngx_http_request_t *r, 
+ngx_http_limit_access_destroy_list(ngx_http_request_t *r, 
         ngx_http_limit_access_ctx_t *ctx)
 {
     ngx_uint_t                      i;

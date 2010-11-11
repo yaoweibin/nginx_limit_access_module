@@ -311,7 +311,7 @@ server {
 "show_type=ip&show_list=2130706433"
 --- response_body_like: ^Ban hash table:(.*)ip(.*)$
 
-=== TEST 11: the destory_list test
+=== TEST 11: the destroy_list test
 --- no_manager
 --- config
 limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
@@ -336,8 +336,8 @@ server {
 }
 --- request eval
 "POST /limit_interface\n\n" . 
-"destory_list"
---- response_body_like: Ban hash table destoryed.
+"destroy_list"
+--- response_body_like: Ban hash table destroyed.
 
 === TEST 12: the following get test
 --- no_manager

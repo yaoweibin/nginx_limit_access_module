@@ -1,6 +1,6 @@
 Name
     nginx_limit_access_module - support to deny specific variable with HTTP
-    POST interfafce
+    POST interface
 
 Status
     This module is at its very early phase of development and considered
@@ -152,7 +152,7 @@ Interface
 
     show_type=ip&show_list=all
 
-    destory_list: invalidate all the current ban list, then all the client
+    destroy_list: invalidate all the current ban list, then all the client
     request is allowed.
 
 Installation

@@ -1,6 +1,6 @@
 = Name =
 
-'''nginx_limit_access_module''' - support to deny specific variable with HTTP POST interfafce 
+'''nginx_limit_access_module''' - support to deny specific variable with HTTP POST interface 
 
 = Status =
 
@@ -150,7 +150,7 @@ If you want to show all the current ban IP list, You can do like this:
 show_type=ip&show_list=all
 </geshi>
 
-destory_list: invalidate all the current ban list, then all the client request is allowed.
+destroy_list: invalidate all the current ban list, then all the client request is allowed.
 
 = Installation =
 
