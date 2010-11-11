@@ -7,12 +7,12 @@ static ngx_http_limit_access_bucket_t *ngx_alloc_limit_access_bucket(
 static void ngx_free_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx,
         ngx_http_limit_access_bucket_t *bucket);
 
-
 static ngx_int_t ngx_http_limit_access_process_post(ngx_http_request_t *r, 
         u_char *data, size_t len);
 static ngx_int_t ngx_http_limit_access_process_param(ngx_http_request_t *r, 
         ngx_str_t *param);
 
+static ngx_int_t limit_access_type(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value);
 static ngx_int_t limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value);
@@ -40,18 +40,23 @@ static ngx_int_t ngx_http_limit_access_expire_list(ngx_http_request_t *r,
         ngx_http_limit_access_ctx_t *ctx);
 
 static ngx_http_limit_access_directive_t directives[] = {
-    { ngx_string("ban_type"),     NULL },
+    { ngx_string("ban_type"),     limit_access_type },
     { ngx_string("ban_expire"),   limit_access_ban_expire },
     { ngx_string("ban_list"),     limit_access_ban_list },
-    { ngx_string("free_type"),    NULL },
+    { ngx_string("free_type"),    limit_access_type },
     { ngx_string("free_list"),    limit_access_free_list },
-    { ngx_string("show_type"),    NULL },
+    { ngx_string("show_type"),    limit_access_type },
     { ngx_string("show_list"),    limit_access_show_list },
     { ngx_string("destory_list"), limit_access_destory_list },
     { ngx_string("expire_list"),  limit_access_expire_list },
     { ngx_null_string, NULL }
 };
 
+static ngx_http_limit_access_type_name_t limit_types[] = {
+    { ngx_string("ip"),       HASH_IP },
+    { ngx_string("variable"), HASH_VARIABLE },
+    { ngx_null_string,        0 }
+};
 
 void
 ngx_http_limit_access_process_handler(ngx_http_request_t *r)
@@ -257,6 +262,51 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
 
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
             "limit_access: invalid param: \"%V\"=\"%V\"", &name, &value);
+
+    return NGX_ERROR;
+}
+
+
+static ngx_int_t 
+limit_access_type(ngx_http_request_t *r, ngx_str_t *value)
+{
+    ngx_uint_t                             i;
+    ngx_http_limit_access_ctx_t           *ctx;
+    ngx_http_limit_access_conf_t          *lacf;
+    ngx_http_limit_access_type_name_t     *type;
+
+    lacf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
+
+    if (lacf->shm_zone == NULL) {
+        return NGX_ERROR;
+    }
+
+    ctx = lacf->shm_zone->data;
+
+    type = limit_types;
+    for(i = 0; ;i++) {
+        if (type[i].name.len == value->len 
+                && (ngx_strncmp(type[i].name.data, value->data, value->len) == 0)) {
+
+            if (type[i].flag != ctx->type) {
+
+                ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                        "limit_access: type not match: %ud != %ud", 
+                        type[i].flag, ctx->type);
+
+                return NGX_ERROR;
+            }
+
+            return NGX_OK;
+        }
+
+        if (type[i].name.len == 0) {
+            break;
+        }
+    }
+
+    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+            "limit_access: invalid type \"%V\"", value);
 
     return NGX_ERROR;
 }

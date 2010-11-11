@@ -26,7 +26,12 @@ typedef struct ngx_http_limit_access_bucket_s {
 
 typedef struct {
     ngx_uint_t                       valid;
+
+    /* store the free bucket when the bucket's type is IP, this can reduce
+     * the memory allocation time
+     */
     ngx_http_limit_access_bucket_t  *free;
+
     ngx_http_limit_access_bucket_t **buckets;
 } ngx_http_limit_access_hash_t;
 
@@ -53,6 +58,12 @@ typedef struct {
     ngx_str_t                              name;
     ngx_http_limit_access_process_value_pt handler;
 } ngx_http_limit_access_directive_t;
+
+typedef struct {
+    ngx_str_t  name;
+    ngx_uint_t flag;
+} ngx_http_limit_access_type_name_t;
+
 
 void ngx_http_limit_access_process_handler(ngx_http_request_t *r);
 
