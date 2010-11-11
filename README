@@ -1,6 +1,6 @@
 Name
-    nginx_limit_access_module - support to deny specific variable with HTTP
-    POST interface
+    nginx_limit_access_module - support to deny request by specific variable
+    with HTTP POST interface
 
 Status
     This module is at its very early phase of development and considered
@@ -39,7 +39,7 @@ Synopsis
     }
 
 Description
-    This module can deny specific variable with HTTP POST interface.
+    This module can deny request specific variable with HTTP POST interface.
 
 Directives
   limit_access_zone

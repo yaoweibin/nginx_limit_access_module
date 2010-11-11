@@ -1,6 +1,6 @@
 = Name =
 
-'''nginx_limit_access_module''' - support to deny specific variable with HTTP POST interface 
+'''nginx_limit_access_module''' - support to deny request by specific variable with HTTP POST interface 
 
 = Status =
 
@@ -43,7 +43,7 @@ http {
 
 = Description =
 
-This module can deny specific variable with HTTP POST interface.
+This module can deny request specific variable with HTTP POST interface.
 
 = Directives =
 
