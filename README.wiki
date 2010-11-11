@@ -114,7 +114,7 @@ In this case, the hash table is allocated 5MB as a zone called "one". The hash t
 
 If the record is the type of ip, each record's size is about 32 bytes. If you have a 5M zone, it can hold about 100k+ records. 
 
-The type can be 'ip' or any of the variable in Nginx. I use the 'ip' as a sepecial variable because I treat the ip as an interger. This can save some storage memory. Otherwise, I treat all the variable to be string.  
+The type can be 'ip' or any of the variable in Nginx. I use the 'ip' as a special variable because I treat the ip as an integer. This can save some storage memory. Otherwise, I treat all the variable to be string.  
 
 == limit_access_interface ==
 
@@ -134,7 +134,8 @@ This directive set the interface location where you can add or delete the deny l
 
 '''context:''' ''http, server, location''
 
-This directive set the location where you can deny specific variable from the zone's record. The deny action is the same as the [http://wiki.nginx.org/HttpAccessModule nginx_http_access_module].
+This directive set the location where you can deny specific variable from the zone's record. If you want to do deny action in several locations, you can use this directive in their parent block. The directive is very like the [http://wiki.nginx.org/HttpAccessModule#deny deny].
+
 It will look up the zone's hash table. If it find the request's variable is in the hash table and it's not expired, then return 403.
 
 == limit_access_variable ==
@@ -146,6 +147,8 @@ It will look up the zone's hash table. If it find the request's variable is in t
 '''context:''' ''http, server, location''
 
 This directive set the name of variable and the zone attached with the variable. When you access this variable, the variable will do like the limit_access directive. It will look up the zone's hash table. If it finds the request's variable is in the hash table and it's not expired, then the value is '1'. If not, the value is null.
+
+If you want to do the same deny action in several locations, you can use the directive of ''limit_acccess''.
 
 == limit_access_default_expire ==
 

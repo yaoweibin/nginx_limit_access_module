@@ -105,7 +105,7 @@ Directives
     If you have a 5M zone, it can hold about 100k+ records.
 
     The type can be 'ip' or any of the variable in Nginx. I use the 'ip' as
-    a sepecial variable because I treat the ip as an interger. This can save
+    a special variable because I treat the ip as an integer. This can save
     some storage memory. Otherwise, I treat all the variable to be string.
 
   limit_access_interface
@@ -126,10 +126,13 @@ Directives
     context: *http, server, location*
 
     This directive set the location where you can deny specific variable
-    from the zone's record. The deny action is the same as the
-    nginx_http_access_module (<http://wiki.nginx.org/HttpAccessModule>). It
-    will look up the zone's hash table. If it find the request's variable is
-    in the hash table and it's not expired, then return 403.
+    from the zone's record. If you want to do deny action in several
+    locations, you can use this directive in their parent block. The
+    directive is very like the deny
+    (<http://wiki.nginx.org/HttpAccessModule#deny>).
+
+    It will look up the zone's hash table. If it find the request's variable
+    is in the hash table and it's not expired, then return 403.
 
   limit_access_variable
     syntax: *limit_access_variable zone=name $limit_access_variable_name;*
@@ -143,6 +146,9 @@ Directives
     limit_access directive. It will look up the zone's hash table. If it
     finds the request's variable is in the hash table and it's not expired,
     then the value is '1'. If not, the value is null.
+
+    If you want to do the same deny action in several locations, you can use
+    the directive of *limit_acccess*.
 
   limit_access_default_expire
     syntax: *limit_access_default_expire expire_time;*
