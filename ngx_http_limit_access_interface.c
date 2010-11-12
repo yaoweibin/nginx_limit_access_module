@@ -80,11 +80,54 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
         || r->request_body->temp_file)
     {
         request_ctx->status = NGX_HTTP_NO_CONTENT;
-
         goto finish;
     }
 
-    if (r->request_body->bufs) {
+    len = 0;
+
+    if(r->request_body->temp_file) {
+        cl = r->request_body->bufs;
+
+        while (cl) {
+            buf = cl->buf;
+
+            if (buf->in_file) {
+                len += buf->file_last - buf->file_pos;
+            }
+            else {
+                len += buf->last - buf->pos;
+            }
+
+            cl = cl->next;
+        }
+
+        p = ngx_pnalloc(r->pool, len);
+        if (p == NULL) {
+            request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
+            goto finish;
+        }
+
+        cl = r->request_body->bufs;
+        while (cl) {
+            buf = cl->buf;
+            if (buf->in_file) {
+                rc = (ngx_int_t) ngx_read_file(buf->file, p,
+                        buf->file_last - buf->file_pos, buf->file_pos);
+                if (rc == NGX_ERROR) {
+                    request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
+                    goto finish;
+                }
+
+                p += rc;
+            }
+            else {
+                p = ngx_cpymem(p, buf->pos, buf->last - buf->pos);
+            }
+
+            cl = cl->next;
+        }
+    }
+    else {
         cl = r->request_body->bufs;
         buf = cl->buf;
 
@@ -99,17 +142,12 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
             p = ngx_pnalloc(r->pool, len);
             if (p == NULL) {
                 request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
-
                 goto finish;
             }
 
             p = ngx_cpymem(p, buf->pos, buf->last - buf->pos);
             ngx_memcpy(p, next->pos, next->last - next->pos);
         }
-    }
-    else {
-        len = r->request_body->temp_file->file.name.len;
-        p = r->request_body->temp_file->file.name.data;
     }
 
     request_ctx->buf = ngx_create_temp_buf(r->pool, ngx_pagesize * 10);
@@ -122,6 +160,9 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
     rc = ngx_http_limit_access_process_post(r, p, len);
 
     if (rc != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                "limit_access: invalid post body: \"*%s\"", len, p);
+
         request_ctx->status = NGX_HTTP_BAD_REQUEST;
     }
 
@@ -176,7 +217,7 @@ ngx_http_limit_access_process_post(ngx_http_request_t *r,
         param.data = p;
         param.len = 0;
 
-        while (p != last) {
+        while (p < last) {
             if (*p == '&') {
                 p++;
                 break;
@@ -198,7 +239,7 @@ ngx_http_limit_access_process_post(ngx_http_request_t *r,
                 return rc;
             }
         }
-    } while (p != last);
+    } while (p < last);
 
     return NGX_OK;
 }
