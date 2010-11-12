@@ -58,10 +58,12 @@ static ngx_http_limit_access_type_name_t limit_types[] = {
     { ngx_null_string,        0 }
 };
 
+
 void
 ngx_http_limit_access_process_handler(ngx_http_request_t *r)
 {
-    u_char       *p;
+    u_char       *p, *data;
+    ssize_t       size;
     size_t        len;
     ngx_buf_t    *buf, *next;
     ngx_int_t     rc;
@@ -83,6 +85,14 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
         goto finish;
     }
 
+    request_ctx->buf = ngx_create_temp_buf(r->pool, ngx_pagesize * 10);
+    if (request_ctx->buf == NULL) {
+        request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
+
+        goto finish;
+    }
+
+    data = NULL;
     len = 0;
 
     if(r->request_body->temp_file) {
@@ -101,24 +111,25 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
             cl = cl->next;
         }
 
-        p = ngx_pnalloc(r->pool, len);
+        data = p = ngx_pnalloc(r->pool, len);
         if (p == NULL) {
             request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
             goto finish;
         }
 
         cl = r->request_body->bufs;
+
         while (cl) {
             buf = cl->buf;
             if (buf->in_file) {
-                rc = (ngx_int_t) ngx_read_file(buf->file, p,
+                size = ngx_read_file(buf->file, p,
                         buf->file_last - buf->file_pos, buf->file_pos);
-                if (rc == NGX_ERROR) {
+                if (size == NGX_ERROR) {
                     request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
                     goto finish;
                 }
 
-                p += rc;
+                p += size;
             }
             else {
                 p = ngx_cpymem(p, buf->pos, buf->last - buf->pos);
@@ -133,13 +144,13 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
 
         if (cl->next == NULL) {
             len = buf->last - buf->pos;
-            p = buf->pos;
+            data = p = buf->pos;
         }
         else {
             next = cl->next->buf;
             len = (buf->last - buf->pos) + (next->last - next->pos);
 
-            p = ngx_pnalloc(r->pool, len);
+            data = p = ngx_pnalloc(r->pool, len);
             if (p == NULL) {
                 request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
                 goto finish;
@@ -150,18 +161,11 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
         }
     }
 
-    request_ctx->buf = ngx_create_temp_buf(r->pool, ngx_pagesize * 10);
-    if (request_ctx->buf == NULL) {
-        request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
-
-        goto finish;
-    }
-
-    rc = ngx_http_limit_access_process_post(r, p, len);
+    rc = ngx_http_limit_access_process_post(r, data, len);
 
     if (rc != NGX_OK) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "limit_access: invalid post body: \"*%s\"", len, p);
+                "limit_access: invalid post body: \"%*s\"", len, data);
 
         request_ctx->status = NGX_HTTP_BAD_REQUEST;
     }
