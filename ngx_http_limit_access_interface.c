@@ -938,6 +938,7 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
             if (bucket->key) {
 
                 total++;
+                ngx_memzero(addr_buffer, sizeof(addr_buffer));
                 ngx_inet_ntop(AF_INET, (void *) &bucket->key, addr_buffer, sizeof(addr_buffer));
 
                 if (bucket->expire > now) {
