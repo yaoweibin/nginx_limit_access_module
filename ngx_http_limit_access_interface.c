@@ -78,8 +78,7 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
             "limit_access_process_handler");
 
     if (r->request_body == NULL
-        || r->request_body->bufs == NULL
-        || r->request_body->temp_file)
+        || r->request_body->bufs == NULL)
     {
         request_ctx->status = NGX_HTTP_NO_CONTENT;
         goto finish;
