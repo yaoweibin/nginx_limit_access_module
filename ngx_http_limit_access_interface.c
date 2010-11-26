@@ -585,10 +585,17 @@ ngx_http_limit_access_ban_ip(ngx_http_request_t *r,
     new = ngx_alloc_limit_access_bucket(ctx, 
             sizeof(ngx_http_limit_access_bucket_t));
     if (new == NULL) {
-        ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0,
-                "limit_access: not enough share memory");
+        ngx_http_limit_access_expire_list(r, ctx);
 
-        return NGX_ERROR;
+        new = ngx_alloc_limit_access_bucket(ctx, 
+                sizeof(ngx_http_limit_access_bucket_t));
+
+        if (new == NULL) {
+            ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0,
+                    "limit_access: not enough shared memory");
+
+            return NGX_ERROR;
+        }
     }
 
     *p = new;
@@ -1014,10 +1021,15 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
     len = variable->len + sizeof(ngx_http_limit_access_bucket_t);
     new = ngx_alloc_limit_access_bucket(ctx, len);
     if (new == NULL) {
-        ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0,
-                "limit_access: not enough share memory");
+        ngx_http_limit_access_expire_list(r, ctx);
 
-        return NGX_ERROR;
+        new = ngx_alloc_limit_access_bucket(ctx, len);
+        if (new == NULL) {
+            ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0,
+                    "limit_access: not enough shared memory");
+
+            return NGX_ERROR;
+        }
     }
 
     *p = new;

@@ -43,7 +43,7 @@ http {
 
 </geshi>
 
-== both deny $remote_addr and $host example: ==
+== deny both $remote_addr and $host example: ==
 
 <geshi lang="nginx">
 
@@ -89,7 +89,6 @@ http {
 </geshi>
 
 
-
 = Description =
 
 This module can deny request specific variable with HTTP POST interface.
@@ -107,14 +106,14 @@ This module can deny request specific variable with HTTP POST interface.
 The directive describes the area, which stores the record of the limit hash table. Example of usage:
 
 <geshi>
-limit_access_zone  zone=one:5m bucket_number=10007;
+limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
 </geshi>
 
 In this case, the hash table is allocated 5MB as a zone called "one". The hash table's bucket number is 10007. We can get the record's key of this hash table from the remainder $binary_remote_addr with bucket_number. 
 
 If the record is the type of ip, each record's size is about 32 bytes. If you have a 5M zone, it can hold about 100k+ records. 
 
-The type can be 'ip' or any of the variable in Nginx. I use the 'ip' as a special variable because I treat the ip as an integer. This can save some storage memory. Otherwise, I treat all the variable to be string.  
+The type can be 'ip' or any of the variable in Nginx. I use the 'ip' as a special variable while I treat the ip as an integer. This can save some storage memory. Otherwise, I treat all the variable to be string.  
 
 == limit_access_interface ==
 
@@ -134,7 +133,7 @@ This directive set the interface location where you can add or delete the deny l
 
 '''context:''' ''http, server, location''
 
-This directive set the location where you can deny specific variable from the zone's record. If you want to do deny action in several locations, you can use this directive in their parent block. The directive is very like the [http://wiki.nginx.org/HttpAccessModule#deny deny].
+This directive set the location where you can deny specific variable from the zone's record. If you want to do deny action in several locations, you can use this directive in their parent block. The directive is like the [http://wiki.nginx.org/HttpAccessModule#deny deny].
 
 It will look up the zone's hash table. If it find the request's variable is in the hash table and it's not expired, then return 403.
 
@@ -180,7 +179,7 @@ ban_type=variable&ban_expire=3600&ban_list=192.168.1.1,192.168.1.2
 
 The parameters' specification is:
 
-ban_type: the type of ban_list. It can be: ip, variable.
+ban_type: the type of ban_list. It can be: ip, variable. It's related with the type of zone.
 
 ban_expire: the expire time for the ban list. The unit of time can be: s(second,default), m(minute), h(hour), d(day), w(week), M(month), y(year).
 
@@ -198,7 +197,7 @@ show_list: show the ban list. You can get the specific ban list like this:
 show_type=variable&show_list=127.0.0.1,127.1.1.1
 </geshi>
 
-If you want to show all the current ban IP list, You can do like this:
+If your zone's type is IP, and you want to show all the current ban IP list, You can do like this:
 
 <geshi>
 show_type=ip&show_list=all
