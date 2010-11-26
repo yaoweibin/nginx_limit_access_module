@@ -999,7 +999,7 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
     expire = ngx_time() + request_ctx->expire;
 
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: add ban_variable=\"%V\", key=%d, expire=%d", variable, key, expire);
+            "limit_access: add ban_variable=\"%V\", key=%ud, expire=%T", variable, key, expire);
 
     while (bucket) {
         if (bucket->key == key && 
@@ -1011,7 +1011,7 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
         }
 
         ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "limit_access: free_list, bucket[%d]=%p, bucket->next=%p", 
+                "limit_access: ban_variable, key=%ud, bucket=%p, bucket->next=%p", 
                 key, bucket, bucket->next);
 
         p = &bucket->next;
@@ -1429,7 +1429,7 @@ ngx_http_limit_access_lookup_variable(ngx_http_request_t *r,
     bucket = hash->buckets[key % ctx->bucket_number];
 
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: look_up_variable=\"%V\", key=%d, now=%T", &variable, key, now);
+            "limit_access: look_up_variable=\"%V\", key=%ud, now=%T", &variable, key, now);
 
     while (bucket) {
         if (bucket->key == key && bucket->len == variable.len) {
