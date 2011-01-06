@@ -622,6 +622,7 @@ ngx_http_limit_access_create_conf(ngx_conf_t *cf)
      * set by ngx_pcalloc():
      *
      *     conf->shm_zone = NULL;
+     *     conf->limit_check = 0;
      */
 
     conf->limit_log_level = NGX_CONF_UNSET_UINT;
