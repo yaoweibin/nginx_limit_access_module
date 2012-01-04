@@ -270,19 +270,34 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
     ctx = shm_zone->data;
 
     if (octx) {
+        if (ctx->type != octx->type) {
+
+            ngx_log_error(NGX_LOG_EMERG, shm_zone->shm.log, 0,
+                          "limit_access \"%V\" uses different types with previous version, "
+                          "please restart nginx",
+                          &shm_zone->shm.name);
+
+            return NGX_ERROR;
+        }
+
         if (ctx->bucket_number != octx->bucket_number) {
+
             ngx_log_error(NGX_LOG_EMERG, shm_zone->shm.log, 0,
                           "limit_access \"%V\" uses the bucket_number=%d "
-                          "while previously it used the bucket_number=%d ",
+                          "while previously it used the bucket_number=%d, "
+                          "please restart nginx",
                           &shm_zone->shm.name, ctx->bucket_number, octx->bucket_number);
 
             return NGX_ERROR;
         }
 
-        if (ngx_strcmp(ctx->var.data, octx->var.data) != 0) {
+        if (ctx->type == HASH_VARIABLE && ctx->var.data && octx->var.data
+                && ngx_strcmp(ctx->var.data, octx->var.data) != 0) {
+
             ngx_log_error(NGX_LOG_EMERG, shm_zone->shm.log, 0,
                           "limit_access \"%V\" uses the \"%V\" variable "
-                          "while previously it used the \"%V\" variable",
+                          "while previously it used the \"%V\" variable, "
+                          "please restart nginx",
                           &shm_zone->shm.name, &ctx->var, &octx->var);
 
             return NGX_ERROR;
