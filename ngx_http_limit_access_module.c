@@ -353,7 +353,7 @@ static char *
 ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     u_char                       *p;
-    size_t                        size, len;
+    size_t                        size, min, len;
     ngx_str_t                    *value, name, s, variable;
     ngx_int_t                     number, index;
     ngx_uint_t                    i;
@@ -366,6 +366,7 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     number = NGX_HASH_LARGE_HSIZE;
     name.len = 0;
     size = 0;
+    min = 1 * 1024 * 1024;
     type = HASH_IP;
     index = NGX_CONF_UNSET;
     variable.len = 0;
@@ -388,8 +389,10 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                 s.data = p;
 
                 size = ngx_parse_size(&s);
-                if (size > 8191) {
+                if (size >= min) {
                     continue;
+                } else {
+                    size = min;
                 }
             }
 
@@ -445,7 +448,7 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                            "invalid parameter \"%V\"", &value[i]);
         return NGX_CONF_ERROR;
     }
-
+    
     shm_zone = ngx_shared_memory_add(cf, &name, size,
                                      &ngx_http_limit_access_module);
     if (shm_zone == NULL) {
