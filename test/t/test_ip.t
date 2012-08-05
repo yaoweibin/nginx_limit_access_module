@@ -400,3 +400,36 @@ server {
 "show_type=ip&show_list=all"
 --- response_body_like: ^Ban hash table:(.*)total record = 0$
 
+
+=== TEST 14: the show_list test, wrong type
+--- no_manager
+--- config
+limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
+server {
+    listen       1982;
+    server_name  localhost;
+
+    limit_access_variable zone=one $limit_access_deny;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+
+    location /limit_status {
+        limit_access_status zone=one;
+    }
+}
+--- request eval
+"POST /limit_interface\n\n" . 
+"show_type=variable&show_list=all"
+--- error_code: 400
+--- response_body_like: ^.*$
+
