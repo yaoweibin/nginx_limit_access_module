@@ -290,8 +290,8 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
             return NGX_ERROR;
         }
 
-        if (ctx->type == HASH_VARIABLE && ctx->var.data && octx->var.data
-                && ngx_strcmp(ctx->var.data, octx->var.data) != 0) {
+        if (ctx->type == HASH_VARIABLE && ctx->var.data && octx->var.data &&
+            ngx_strncmp(ctx->var.data, octx->var.data, ctx->var.len) != 0) {
 
             ngx_log_error(NGX_LOG_EMERG, shm_zone->shm.log, 0,
                           "limit_access \"%V\" uses the \"%V\" variable "
