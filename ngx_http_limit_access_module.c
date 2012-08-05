@@ -14,11 +14,11 @@ static char *ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd,
 static char *ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd,
     void *conf);
 static char * ngx_http_limit_access_interface(ngx_conf_t *cf, 
-        ngx_command_t *cmd, void *conf);
+    ngx_command_t *cmd, void *conf);
 static char *ngx_http_limit_access_status(ngx_conf_t *cf, ngx_command_t *cmd, 
-        void *conf);
+    void *conf);
 static char *ngx_http_limit_access_variable(ngx_conf_t *cf, ngx_command_t *cmd, 
-        void *conf);
+    void *conf);
 static ngx_int_t ngx_http_limit_access_deny_variable(ngx_http_request_t *r,
     ngx_http_variable_value_t *v, uintptr_t data);
 
@@ -129,7 +129,8 @@ ngx_http_limit_access_interface_handler(ngx_http_request_t *r)
         return NGX_HTTP_NOT_ALLOWED;
     }
 
-    request_ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_limit_access_request_ctx_t));
+    request_ctx = ngx_pcalloc(r->pool,
+                              sizeof(ngx_http_limit_access_request_ctx_t));
     if (request_ctx == NULL) {
         return NGX_ERROR;
     }
@@ -144,7 +145,8 @@ ngx_http_limit_access_interface_handler(ngx_http_request_t *r)
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
             "limit_access_interface_handler");
 
-    rc = ngx_http_read_client_request_body(r, ngx_http_limit_access_process_handler);
+    rc = ngx_http_read_client_request_body(r,
+                                       ngx_http_limit_access_process_handler);
 
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
         return rc;
@@ -165,7 +167,7 @@ ngx_http_limit_access_deny_variable(ngx_http_request_t *r,
     ctx = (ngx_http_limit_access_ctx_t *)data;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access_deny_variable");
+                   "limit_access_deny_variable");
 
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
@@ -180,8 +182,7 @@ ngx_http_limit_access_deny_variable(ngx_http_request_t *r,
 
     if (ctx->type == HASH_IP) {
         rc = ngx_http_limit_access_lookup_ip(r, ctx);
-    }
-    if (ctx->type == HASH_VARIABLE) {
+    } else if (ctx->type == HASH_VARIABLE) {
         rc = ngx_http_limit_access_lookup_variable(r, ctx);
     }
 
@@ -210,7 +211,8 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
     lacf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access_handler: %p, %d", lacf->shm_zone, lacf->limit_check);
+                   "limit_access_handler: %p, %d",
+                   lacf->shm_zone, lacf->limit_check);
 
     if (lacf->shm_zone == NULL || !lacf->limit_check) {
         return NGX_DECLINED;
@@ -234,8 +236,7 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
 
     if (ctx->type == HASH_IP) {
         rc = ngx_http_limit_access_lookup_ip(r, ctx);
-    }
-    if (ctx->type == HASH_VARIABLE) {
+    } else if (ctx->type == HASH_VARIABLE) {
         rc = ngx_http_limit_access_lookup_variable(r, ctx);
     }
 
@@ -244,7 +245,7 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
     if (rc == 1) {
 
         ngx_log_error(lacf->limit_log_level, r->connection->log, 0,
-                "access forbidden by limit_access");
+                      "access forbidden by limit_access");
 
         return NGX_HTTP_FORBIDDEN;
     }
@@ -256,6 +257,7 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_limit_access_status_handler(ngx_http_request_t *r)
 {
+    /* TODO */
     return NGX_DECLINED;
 }
 
@@ -273,8 +275,8 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
         if (ctx->type != octx->type) {
 
             ngx_log_error(NGX_LOG_EMERG, shm_zone->shm.log, 0,
-                          "limit_access \"%V\" uses different types with previous version, "
-                          "please restart nginx",
+                          "limit_access \"%V\" uses different types with "
+                          "previous version, please restart nginx",
                           &shm_zone->shm.name);
 
             return NGX_ERROR;
@@ -286,7 +288,8 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
                           "limit_access \"%V\" uses the bucket_number=%d "
                           "while previously it used the bucket_number=%d, "
                           "please restart nginx",
-                          &shm_zone->shm.name, ctx->bucket_number, octx->bucket_number);
+                          &shm_zone->shm.name, ctx->bucket_number,
+                          octx->bucket_number);
 
             return NGX_ERROR;
         }
@@ -423,8 +426,8 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
             if (ngx_strncmp(p, "ip", len) == 0) {
                 type = HASH_IP;
-            }
-            else if (p[0] == '$') {
+
+            } else if (p[0] == '$') {
                 type = HASH_VARIABLE;
 
                 variable.data = p + 1;
@@ -434,8 +437,8 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                 if (index == NGX_ERROR) {
                     return NGX_CONF_ERROR;
                 }
-            }
-            else {
+
+            } else {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "invalid type \"%V\"", &value[i]);
                 return NGX_CONF_ERROR;
@@ -457,8 +460,8 @@ ngx_http_limit_access_zone(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (shm_zone->data) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                   "limit_access_zone \"%V\" is already used.",
-                   &value[1]);
+                           "limit_access_zone \"%V\" is already used.",
+                           &value[1]);
         return NGX_CONF_ERROR;
     }
 
@@ -497,12 +500,12 @@ ngx_http_limit_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         name.data = value[1].data + 5;
 
         lacf->shm_zone = ngx_shared_memory_add(cf, &name, 0,
-                &ngx_http_limit_access_module);
+                                         &ngx_http_limit_access_module);
         if (lacf->shm_zone == NULL) {
             return NGX_CONF_ERROR;
         }
-    }
-    else {
+
+    } else {
         return "should set the zone's name.";
     }
 
@@ -531,8 +534,8 @@ ngx_http_limit_access_interface(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         if (lacf->shm_zone == NULL) {
             return NGX_CONF_ERROR;
         }
-    }
-    else {
+
+    } else {
         return "should set the zone's name.";
     }
 
@@ -562,8 +565,8 @@ ngx_http_limit_access_status(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         if (lacf->shm_zone == NULL) {
             return NGX_CONF_ERROR;
         }
-    }
-    else {
+
+    } else {
         return "should set the zone's name.";
     }
 
@@ -615,7 +618,7 @@ ngx_http_limit_access_variable(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     lacf->shm_zone = ngx_shared_memory_add(cf, &name, 0,
-            &ngx_http_limit_access_module);
+                                           &ngx_http_limit_access_module);
     if (lacf->shm_zone == NULL) {
         return NGX_CONF_ERROR;
     }
@@ -667,7 +670,7 @@ ngx_http_limit_access_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->limit_log_level, prev->limit_log_level,
                               NGX_LOG_ERR);
     ngx_conf_merge_sec_value(conf->default_expire, prev->default_expire, 
-            60 * 60 * 24);
+                             60 * 60 * 24);
 
     return NGX_CONF_OK;
 }

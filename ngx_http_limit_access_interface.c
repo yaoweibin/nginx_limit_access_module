@@ -3,41 +3,48 @@
 
 
 static ngx_http_limit_access_bucket_t *ngx_alloc_limit_access_bucket(
-        ngx_http_limit_access_ctx_t *ctx, size_t len);
+    ngx_http_limit_access_ctx_t *ctx, size_t len);
 static void ngx_free_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx,
-        ngx_http_limit_access_bucket_t *bucket);
+    ngx_http_limit_access_bucket_t *bucket);
 
 static ngx_int_t ngx_http_limit_access_process_post(ngx_http_request_t *r, 
-        u_char *data, size_t len);
+    u_char *data, size_t len);
 static ngx_int_t ngx_http_limit_access_process_param(ngx_http_request_t *r, 
-        ngx_str_t *param);
+    ngx_str_t *param);
 
-static ngx_int_t limit_access_type(ngx_http_request_t *r, ngx_str_t *value);
-static ngx_int_t limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value);
-static ngx_int_t limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value);
-static ngx_int_t limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value);
-static ngx_int_t limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value);
-static ngx_int_t limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value);
-static ngx_int_t limit_access_expire_list(ngx_http_request_t *r, ngx_str_t *value);
+static ngx_int_t limit_access_type(ngx_http_request_t *r,
+    ngx_str_t *value);
+static ngx_int_t limit_access_ban_expire(ngx_http_request_t *r,
+    ngx_str_t *value);
+static ngx_int_t limit_access_ban_list(ngx_http_request_t *r,
+    ngx_str_t *value);
+static ngx_int_t limit_access_free_list(ngx_http_request_t *r,
+    ngx_str_t *value);
+static ngx_int_t limit_access_show_list(ngx_http_request_t *r,
+    ngx_str_t *value);
+static ngx_int_t limit_access_destroy_list(ngx_http_request_t *r,
+    ngx_str_t *value);
+static ngx_int_t limit_access_expire_list(ngx_http_request_t *r,
+    ngx_str_t *value);
 
 static ngx_int_t ngx_http_limit_access_ban_ip(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, in_addr_t ip);
+    ngx_http_limit_access_ctx_t *ctx, in_addr_t ip);
 static ngx_int_t ngx_http_limit_access_free_ip(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, in_addr_t ip);
+    ngx_http_limit_access_ctx_t *ctx, in_addr_t ip);
 static ngx_int_t ngx_http_limit_access_show_ip(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, in_addr_t ip);
+    ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, in_addr_t ip);
 
 static ngx_int_t ngx_http_limit_access_ban_variable(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable);
+    ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable);
 static ngx_int_t ngx_http_limit_access_free_variable(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable);
+    ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable);
 static ngx_int_t ngx_http_limit_access_show_variable(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, ngx_str_t *variable);
+    ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, ngx_str_t *variable);
 
 static ngx_int_t ngx_http_limit_access_destroy_list(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx);
+    ngx_http_limit_access_ctx_t *ctx);
 static ngx_int_t ngx_http_limit_access_expire_list(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx);
+    ngx_http_limit_access_ctx_t *ctx);
 
 static ngx_http_limit_access_directive_t directives[] = {
     { ngx_string("ban_type"),     limit_access_type },
@@ -75,19 +82,18 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access_process_handler");
+                   "limit_access_process_handler");
 
-    if (r->request_body == NULL
-        || r->request_body->bufs == NULL)
+    if (r->request_body == NULL || r->request_body->bufs == NULL)
     {
         request_ctx->status = NGX_HTTP_NO_CONTENT;
         goto finish;
     }
 
     request_ctx->buf = ngx_create_temp_buf(r->pool, ngx_pagesize * 10);
+
     if (request_ctx->buf == NULL) {
         request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
-
         goto finish;
     }
 
@@ -102,8 +108,8 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
 
             if (buf->in_file) {
                 len += buf->file_last - buf->file_pos;
-            }
-            else {
+
+            } else {
                 len += buf->last - buf->pos;
             }
 
@@ -122,30 +128,30 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
             buf = cl->buf;
             if (buf->in_file) {
                 size = ngx_read_file(buf->file, p,
-                        buf->file_last - buf->file_pos, buf->file_pos);
+                           buf->file_last - buf->file_pos, buf->file_pos);
                 if (size == NGX_ERROR) {
                     request_ctx->status = NGX_HTTP_INTERNAL_SERVER_ERROR;
                     goto finish;
                 }
 
                 p += size;
-            }
-            else {
+
+            } else {
                 p = ngx_cpymem(p, buf->pos, buf->last - buf->pos);
             }
 
             cl = cl->next;
         }
-    }
-    else {
+
+    } else {
         cl = r->request_body->bufs;
         buf = cl->buf;
 
         if (cl->next == NULL) {
             len = buf->last - buf->pos;
             data = p = buf->pos;
-        }
-        else {
+
+        } else {
             next = cl->next->buf;
             len = (buf->last - buf->pos) + (next->last - next->pos);
 
@@ -164,7 +170,8 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
 
     if (rc != NGX_OK) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "limit_access: invalid post body: \"%*s\"", len, data);
+                      "limit_access: invalid post body: \"%*s\"",
+                      len, data);
 
         request_ctx->status = NGX_HTTP_BAD_REQUEST;
     }
@@ -188,13 +195,13 @@ finish:
             if (rc == NGX_OK) {
                 rc = ngx_http_output_filter(r, &out);
             }
-        }
-        else {
+
+        } else {
             r->header_only = 1;
             rc = ngx_http_send_header(r);
         }
-    }
-    else {
+
+    } else {
         r->header_only = 1;
         rc = ngx_http_send_header(r);
     }
@@ -205,14 +212,14 @@ finish:
 
 static ngx_int_t 
 ngx_http_limit_access_process_post(ngx_http_request_t *r, 
-        u_char *data, size_t len)
+    u_char *data, size_t len)
 {
     u_char    *p, *last;
     ngx_int_t  rc;
     ngx_str_t  param;
 
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
-            "limit_access_post body:\"%*s\"", len, data);
+    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                  "limit_access_post body:\"%*s\"", len, data);
 
     p = data;
     last = data + len;
@@ -235,13 +242,14 @@ ngx_http_limit_access_process_post(ngx_http_request_t *r,
             p++;
         }
 
-        if(param.len != 0) {
+        if (param.len != 0) {
             rc = ngx_http_limit_access_process_param(r, &param);
 
             if(rc != NGX_OK) {
                 return rc;
             }
         }
+
     } while (p < last);
 
     return NGX_OK;
@@ -258,7 +266,7 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
     ngx_http_limit_access_directive_t *cmd;
 
     ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: preparam=\"%V\"", param);
+                   "limit_access: preparam=\"%V\"", param);
 
     p = (u_char *) ngx_strlchr(param->data, param->data + param->len, '=');
 
@@ -274,8 +282,8 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
         ngx_unescape_uri(&dst, &src, value.len, NGX_UNESCAPE_URI);
 
         value.len = dst - value.data;
-    }
-    else {
+
+    } else {
         name.data = param->data;
         name.len = param->len;
 
@@ -284,17 +292,17 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
     }
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: param: \"%V\"=\"%V\"", &name, &value);
+                   "limit_access: param: \"%V\"=\"%V\"", &name, &value);
 
     cmd = directives;
     for(i = 0; ;i++) {
-        if (cmd[i].name.len == name.len 
-                && (ngx_strncmp(cmd[i].name.data, name.data, name.len) == 0)) {
+        if ((cmd[i].name.len == name.len)
+            && (ngx_strncmp(cmd[i].name.data, name.data, name.len) == 0)) {
 
             if (cmd[i].handler) {
                 return cmd[i].handler(r, &value);
-            }
-            else {
+
+            } else {
                 return NGX_OK;
             }
         }
@@ -305,7 +313,8 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
     }
 
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-            "limit_access: invalid param: \"%V\"=\"%V\"", &name, &value);
+                  "limit_access: invalid param: \"%V\"=\"%V\"",
+                  &name, &value);
 
     return NGX_ERROR;
 }
@@ -329,14 +338,14 @@ limit_access_type(ngx_http_request_t *r, ngx_str_t *value)
 
     type = limit_types;
     for(i = 0; ;i++) {
-        if (type[i].name.len == value->len 
-                && (ngx_strncmp(type[i].name.data, value->data, value->len) == 0)) {
+        if ((type[i].name.len == value->len)
+            && (ngx_strncmp(type[i].name.data, value->data, value->len) == 0)) {
 
             if (type[i].flag != ctx->type) {
 
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                        "limit_access: type not match: %ud != %ud", 
-                        type[i].flag, ctx->type);
+                              "limit_access: type not match: %ud != %ud", 
+                              type[i].flag, ctx->type);
 
                 return NGX_ERROR;
             }
@@ -350,7 +359,7 @@ limit_access_type(ngx_http_request_t *r, ngx_str_t *value)
     }
 
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-            "limit_access: invalid type \"%V\"", value);
+                  "limit_access: invalid type \"%V\"", value);
 
     return NGX_ERROR;
 }
@@ -389,7 +398,7 @@ limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value)
     if (expire == (time_t) NGX_ERROR) {
 
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "limit_access: invalid ban expire: \"%V\"", value);
+                      "limit_access: invalid ban expire: \"%V\"", value);
 
         return NGX_ERROR;
     }
@@ -444,7 +453,8 @@ limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)
 
             if (ctx->type == HASH_IP) {
                 ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: string_ban_ip=\"%*s\"", pos - start, start);
+                               "limit_access: string_ban_ip=\"%*s\"",
+                               pos - start, start);
 
                 if (!is_binary) {
                     ip = ngx_inet_addr(start, pos - start);
@@ -466,10 +476,12 @@ limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)
                 if (rc == NGX_ERROR) {
                     goto fail;
                 }
-            }
-            else if (ctx->type == HASH_VARIABLE) {
+
+            } else if (ctx->type == HASH_VARIABLE) {
+
                 ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: string_ban_variable=\"%*s\"", pos - start, start);
+                               "limit_access: string_ban_variable=\"%*s\"",
+                               pos - start, start);
 
                 variable.len = pos - start;
                 variable.data = start;
@@ -496,7 +508,7 @@ limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)
 fail:
 
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-            "limit_access: invalid ban list: \"%V\"", value);
+                  "limit_access: invalid ban list: \"%V\"", value);
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
@@ -505,7 +517,7 @@ fail:
 
 
 static ngx_http_limit_access_bucket_t *
-ngx_alloc_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx, size_t len) 
+ngx_alloc_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx, size_t len)
 {
     ngx_http_limit_access_hash_t          *hash;
     ngx_http_limit_access_bucket_t        *bucket;
@@ -526,8 +538,9 @@ ngx_alloc_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx, size_t len)
 }
 
 
-static void ngx_free_limit_access_bucket( ngx_http_limit_access_ctx_t *ctx,
-        ngx_http_limit_access_bucket_t *bucket)
+static void
+ngx_free_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx,
+    ngx_http_limit_access_bucket_t *bucket)
 {
     ngx_http_limit_access_hash_t          *hash;
 
@@ -536,8 +549,8 @@ static void ngx_free_limit_access_bucket( ngx_http_limit_access_ctx_t *ctx,
 
         bucket->next = hash->free;
         hash->free = bucket;
-    }
-    else {
+
+    } else {
         ngx_slab_free_locked(ctx->shpool, bucket);
     }
 }
@@ -545,7 +558,7 @@ static void ngx_free_limit_access_bucket( ngx_http_limit_access_ctx_t *ctx,
 
 static ngx_int_t 
 ngx_http_limit_access_ban_ip(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, in_addr_t ip)
+    ngx_http_limit_access_ctx_t *ctx, in_addr_t ip)
 {
     time_t                                expire;
     ngx_uint_t                            key;
@@ -564,7 +577,8 @@ ngx_http_limit_access_ban_ip(ngx_http_request_t *r,
 
     expire = ngx_time() + request_ctx->expire;
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: add ban_ip=%ud, expire=%T", ntohl(ip), expire);
+                   "limit_access: add ban_ip=%ud, expire=%T",
+                   ntohl(ip), expire);
 
     while (bucket) {
         if (bucket->key == key) {
@@ -583,16 +597,16 @@ ngx_http_limit_access_ban_ip(ngx_http_request_t *r,
     }
 
     new = ngx_alloc_limit_access_bucket(ctx, 
-            sizeof(ngx_http_limit_access_bucket_t));
+                                        sizeof(ngx_http_limit_access_bucket_t));
     if (new == NULL) {
         ngx_http_limit_access_expire_list(r, ctx);
 
         new = ngx_alloc_limit_access_bucket(ctx, 
-                sizeof(ngx_http_limit_access_bucket_t));
+                                        sizeof(ngx_http_limit_access_bucket_t));
 
         if (new == NULL) {
-            ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0,
-                    "limit_access: not enough shared memory");
+            ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,
+                          "limit_access: not enough shared memory");
 
             return NGX_ERROR;
         }
@@ -671,8 +685,8 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value)
                 if (rc == NGX_ERROR) {
                     goto fail;
                 }
-            }
-            else if (ctx->type == HASH_VARIABLE) {
+
+            } else if (ctx->type == HASH_VARIABLE) {
                 variable.len = pos - start;
                 variable.data = start;
 
@@ -697,7 +711,7 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value)
 fail:
 
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-            "limit_access: invalid free list: \"%V\"", value);
+                  "limit_access: invalid free list: \"%V\"", value);
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
@@ -707,7 +721,7 @@ fail:
 
 static ngx_int_t 
 ngx_http_limit_access_free_ip(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, in_addr_t ip)
+    ngx_http_limit_access_ctx_t *ctx, in_addr_t ip)
 {
     ngx_uint_t                      key;
     ngx_http_limit_access_hash_t   *hash;
@@ -724,7 +738,7 @@ ngx_http_limit_access_free_ip(ngx_http_request_t *r,
         if (bucket->key == key) {
 
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                    "limit_access: free, ip=%ud", ntohl(key));
+                           "limit_access: free, ip=%ud", ntohl(key));
 
             bucket->key = 0;
             bucket->expire = 0;
@@ -780,7 +794,8 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
     if (!hash->valid) {
-        b->last = ngx_snprintf(b->last, b->end - b->last, "Invalid ban hash table!");
+        b->last = ngx_snprintf(b->last, b->end - b->last,
+                               "Invalid ban hash table!");
 
         ngx_shmtx_unlock(&ctx->shpool->mutex);
         return NGX_OK;
@@ -794,8 +809,8 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
     if (value->len == 0) {
         if (ctx->type == HASH_IP) {
             rc = ngx_http_limit_access_show_ip(r, ctx, b, INADDR_NONE); 
-        }
-        else if (ctx->type == HASH_VARIABLE) {
+
+        } else if (ctx->type == HASH_VARIABLE) {
             rc = ngx_http_limit_access_show_variable(r, ctx, b, NULL); 
         }
 
@@ -816,15 +831,15 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
                 pos = last;
             }
 
-            /* compare with string:"all" */
+            /* compare with string "all" */
             if ((pos- start == sizeof("all") - 1) && 
-                    ngx_strncmp(start, "all", sizeof("all") - 1) == 0) {
+                 ngx_strncmp(start, "all", sizeof("all") - 1) == 0) {
 
                 if (ctx->type == HASH_IP) {
-                    rc = ngx_http_limit_access_show_ip(r, ctx, b, INADDR_NONE); 
-                }
-                else if (ctx->type == HASH_VARIABLE) {
-                    rc = ngx_http_limit_access_show_variable(r, ctx, b, NULL); 
+                    rc = ngx_http_limit_access_show_ip(r, ctx, b, INADDR_NONE);
+
+                } else if (ctx->type == HASH_VARIABLE) {
+                    rc = ngx_http_limit_access_show_variable(r, ctx, b, NULL);
                 }
 
                 if (rc == NGX_ERROR) {
@@ -852,11 +867,11 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
                 }
 
                 rc = ngx_http_limit_access_show_ip(r, ctx, b, ip); 
-            }
-            else if (ctx->type == HASH_VARIABLE) {
+
+            } else if (ctx->type == HASH_VARIABLE) {
                 variable.len = pos - start;
                 variable.data = start;
-                rc = ngx_http_limit_access_show_variable(r, ctx, b, &variable); 
+                rc = ngx_http_limit_access_show_variable(r, ctx, b, &variable);
             }
 
             if (rc == NGX_ERROR) {
@@ -875,7 +890,7 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
 fail:
 
     ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-            "limit_access: invalid show list: \"%V\"", value);
+                  "limit_access: invalid show list: \"%V\"", value);
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
@@ -885,7 +900,7 @@ fail:
 
 static ngx_int_t 
 ngx_http_limit_access_show_ip(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, in_addr_t ip)
+    ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, in_addr_t ip)
 {
     u_char                          addr_buffer[16] = {0};
     u_char                          time_buffer[64] = {0};
@@ -904,24 +919,25 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
         ngx_inet_ntop(AF_INET, (void *) &ip, addr_buffer, sizeof(addr_buffer));
 
         while (bucket) {
+
             if (bucket->key == ip) {
 
                 if (bucket->expire > now) {
                     ngx_http_time(time_buffer, bucket->expire);
 
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "ip=%s(%ud), expire=%s\n", 
-                            addr_buffer, ntohl(bucket->key), time_buffer);
-                }
-                else {
+                                           "ip=%s(%ud), expire=%s\n", 
+                                           addr_buffer, ntohl(bucket->key),
+                                           time_buffer);
+                } else {
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "ip=%s(%ud), expire=expired\n", 
-                            addr_buffer, ntohl(bucket->key));
+                                           "ip=%s(%ud), expire=expired\n", 
+                                           addr_buffer, ntohl(bucket->key));
                 }
 
                 ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: show_ip: ip=%s(%ud), expire=%s", 
-                        addr_buffer, ntohl(bucket->key), time_buffer);
+                               "limit_access: show_ip: ip=%s(%ud), expire=%s", 
+                               addr_buffer, ntohl(bucket->key), time_buffer);
 
                 return NGX_OK;
             }
@@ -930,8 +946,8 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
         }
 
         b->last = ngx_snprintf(b->last, b->end - b->last, 
-                "ip=%s(%ud), there is no this record.\n", 
-                addr_buffer, ntohl(ip));
+                               "ip=%s(%ud), there is no this record.\n", 
+                               addr_buffer, ntohl(ip));
 
         return NGX_OK;
     }
@@ -946,24 +962,26 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
 
                 total++;
                 ngx_memzero(addr_buffer, sizeof(addr_buffer));
-                ngx_inet_ntop(AF_INET, (void *) &bucket->key, addr_buffer, sizeof(addr_buffer));
+                ngx_inet_ntop(AF_INET, (void *) &bucket->key, addr_buffer,
+                              sizeof(addr_buffer));
 
                 if (bucket->expire > now) {
                     ngx_http_time(time_buffer, bucket->expire);
 
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "key[%ud]: ip=%s(%ud), expire=%s\n", 
-                            i, addr_buffer, ntohl(bucket->key), time_buffer);
+                                           "key[%ud]: ip=%s(%ud), expire=%s\n", 
+                                           i, addr_buffer, ntohl(bucket->key),
+                                           time_buffer);
                 }
                 else {
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "key[%ud]: ip=%s(%ud), expire=expired\n", 
-                            i, addr_buffer, ntohl(bucket->key));
+                                       "key[%ud]: ip=%s(%ud), expire=expired\n",
+                                       i, addr_buffer, ntohl(bucket->key));
                 }
 
                 ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: show_ip: ip=%s(%ud), expire=%s", 
-                        addr_buffer, ntohl(bucket->key), time_buffer);
+                               "limit_access: show_ip: ip=%s(%ud), expire=%s", 
+                               addr_buffer, ntohl(bucket->key), time_buffer);
             }
 
             bucket = bucket->next;
@@ -971,7 +989,7 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
     }
 
     b->last = ngx_snprintf(b->last, b->end - b->last, 
-            "total record = %ud\n", total);
+                           "total record = %ud\n", total);
 
     return NGX_OK;
 }
@@ -979,7 +997,7 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
 
 static ngx_int_t 
 ngx_http_limit_access_ban_variable(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable)
+    ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable)
 {
     time_t                                expire;
     ngx_uint_t                            key, len;
@@ -999,20 +1017,22 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
     expire = ngx_time() + request_ctx->expire;
 
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: add ban_variable=\"%V\", key=%ud, expire=%T", variable, key, expire);
+                   "limit_access: add ban_variable=\"%V\", key=%ud, expire=%T",
+                   variable, key, expire);
 
     while (bucket) {
-        if (bucket->key == key && 
-                bucket->len == variable->len && 
-                ngx_strncmp(bucket->value, variable->data, variable->len) == 0) {
+        if ((bucket->key == key) && 
+            (bucket->len == variable->len) && 
+            (ngx_strncmp(bucket->value, variable->data, variable->len) == 0)) {
 
             bucket->expire = expire;
             return NGX_OK;
         }
 
         ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                "limit_access: ban_variable, key=%ud, bucket=%p, bucket->next=%p", 
-                key, bucket, bucket->next);
+                       "limit_access: ban_variable, key=%ud, bucket=%p, "
+                       "bucket->next=%p", 
+                       key, bucket, bucket->next);
 
         p = &bucket->next;
         bucket = *p;
@@ -1025,8 +1045,8 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
 
         new = ngx_alloc_limit_access_bucket(ctx, len);
         if (new == NULL) {
-            ngx_log_error(NGX_LOG_EMERG, r->connection->log, 0,
-                    "limit_access: not enough shared memory");
+            ngx_log_error(NGX_LOG_CRIT, r->connection->log, 0,
+                          "limit_access: not enough shared memory");
 
             return NGX_ERROR;
         }
@@ -1045,7 +1065,7 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
 
 static ngx_int_t 
 ngx_http_limit_access_free_variable(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable)
+    ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable)
 {
     ngx_uint_t                      key;
     ngx_http_limit_access_hash_t   *hash;
@@ -1059,12 +1079,12 @@ ngx_http_limit_access_free_variable(ngx_http_request_t *r,
     pre = bucket = *h;
 
     while (bucket) {
-        if (bucket->key == key && 
-                bucket->len == variable->len && 
-                ngx_strncmp(bucket->value, variable->data, variable->len) == 0) {
+        if ((bucket->key == key) && 
+            (bucket->len == variable->len) && 
+            (ngx_strncmp(bucket->value, variable->data, variable->len) == 0)) {
 
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                    "limit_access: free, variable=\"%V\"", variable);
+                           "limit_access: free, variable=\"%V\"", variable);
 
             bucket->key = 0;
             bucket->expire = 0;
@@ -1093,7 +1113,7 @@ ngx_http_limit_access_free_variable(ngx_http_request_t *r,
 
 static ngx_int_t 
 ngx_http_limit_access_show_variable(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, ngx_str_t *variable)
+    ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, ngx_str_t *variable)
 {
     u_char                          time_buffer[64] = {0};
     time_t                          now;
@@ -1112,25 +1132,26 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
         bucket = hash->buckets[key % ctx->bucket_number];
 
         while (bucket) {
-            if (bucket->key == key && 
-                    bucket->len == variable->len && 
-                    ngx_strncmp(bucket->value, variable->data, variable->len) == 0) {
+            if ((bucket->key == key) && 
+                (bucket->len == variable->len) && 
+                (ngx_strncmp(bucket->value, variable->data, variable->len) == 0)
+               ) {
 
                 if (bucket->expire > now) {
                     ngx_http_time(time_buffer, bucket->expire);
 
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "variable=\"%V\", expire=%s\n", 
-                            variable, time_buffer);
-                }
-                else {
+                                           "variable=\"%V\", expire=%s\n", 
+                                           variable, time_buffer);
+                } else {
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "variable=\"%V\", expire=expired\n", variable);
+                                           "variable=\"%V\", expire=expired\n",
+                                           variable);
                 }
 
                 ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: show_variable=\"%V\", expire=%s",
-                        variable, time_buffer);
+                               "limit_access: show_variable=\"%V\", expire=%s",
+                               variable, time_buffer);
 
                 return NGX_OK;
             }
@@ -1139,7 +1160,8 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
         }
 
         b->last = ngx_snprintf(b->last, b->end - b->last, 
-                "variable=\"%V\", there is no this record.\n", variable);
+                               "variable=\"%V\", there is no this record.\n",
+                               variable);
 
         return NGX_OK;
     }
@@ -1159,18 +1181,18 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
                     ngx_http_time(time_buffer, bucket->expire);
 
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "key[%ud]: variable=\"%*s\", expire=%s\n", 
-                            i, bucket->len, bucket->value, time_buffer);
-                }
-                else {
+                                    "key[%ud]: variable=\"%*s\", expire=%s\n",
+                                    i, bucket->len, bucket->value, time_buffer);
+
+                } else {
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                            "key[%ud]: variable=\"%*s\", expire=expired\n", 
-                            i, bucket->len, bucket->value);
+                                  "key[%ud]: variable=\"%*s\", expire=expired\n",
+                                  i, bucket->len, bucket->value);
                 }
 
                 ngx_log_debug4(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: key[%ud]: variable=\"%*s\", expire=%s\n", 
-                        i, bucket->len, bucket->value, time_buffer);
+                         "limit_access: key[%ud]: variable=\"%*s\", expire=%s\n", 
+                         i, bucket->len, bucket->value, time_buffer);
             }
 
             bucket = bucket->next;
@@ -1211,7 +1233,8 @@ limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value)
 
     if (!hash->valid) {
 
-        b->last = ngx_snprintf(b->last, b->end - b->last, "Invalid ban hash table!");
+        b->last = ngx_snprintf(b->last, b->end - b->last,
+                               "Invalid ban hash table!");
         ngx_shmtx_unlock(&ctx->shpool->mutex);
 
         return NGX_OK;
@@ -1221,7 +1244,8 @@ limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value)
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
-    b->last = ngx_snprintf(b->last, b->end - b->last, "Ban hash table destroyed.\n");
+    b->last = ngx_snprintf(b->last, b->end - b->last,
+                           "Ban hash table destroyed.\n");
 
     return NGX_OK;
 }
@@ -1229,7 +1253,7 @@ limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value)
 
 static ngx_int_t 
 ngx_http_limit_access_destroy_list(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx)
+    ngx_http_limit_access_ctx_t *ctx)
 {
     ngx_uint_t                      i;
     ngx_http_limit_access_hash_t   *hash;
@@ -1244,7 +1268,7 @@ ngx_http_limit_access_destroy_list(ngx_http_request_t *r,
 
         while (bucket) {
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                    "limit_access: bucket=%p", bucket);
+                           "limit_access: bucket=%p", bucket);
 
             bucket->key = 0;
             bucket->expire = 0;
@@ -1288,7 +1312,8 @@ limit_access_expire_list(ngx_http_request_t *r, ngx_str_t *value)
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
     if (!hash->valid) {
-        b->last = ngx_snprintf(b->last, b->end - b->last, "Not invalid ban hash table!");
+        b->last = ngx_snprintf(b->last, b->end - b->last,
+                               "Not invalid ban hash table!");
         ngx_shmtx_unlock(&ctx->shpool->mutex);
 
         return NGX_OK;
@@ -1298,7 +1323,8 @@ limit_access_expire_list(ngx_http_request_t *r, ngx_str_t *value)
 
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
-    b->last = ngx_snprintf(b->last, b->end - b->last, "Ban hash table expired.\n");
+    b->last = ngx_snprintf(b->last, b->end - b->last,
+                           "Ban hash table expired.\n");
 
     return NGX_OK;
 }
@@ -1306,7 +1332,7 @@ limit_access_expire_list(ngx_http_request_t *r, ngx_str_t *value)
 
 static ngx_int_t 
 ngx_http_limit_access_expire_list(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx)
+    ngx_http_limit_access_ctx_t *ctx)
 {
     time_t                          now;
     ngx_uint_t                      i;
@@ -1345,7 +1371,8 @@ ngx_http_limit_access_expire_list(ngx_http_request_t *r,
 
 
 ngx_int_t
-ngx_http_limit_access_lookup_ip(ngx_http_request_t *r, ngx_http_limit_access_ctx_t *ctx)
+ngx_http_limit_access_lookup_ip(ngx_http_request_t *r,
+    ngx_http_limit_access_ctx_t *ctx)
 {
     time_t                          now;
     ngx_uint_t                      key;
@@ -1367,13 +1394,13 @@ ngx_http_limit_access_lookup_ip(ngx_http_request_t *r, ngx_http_limit_access_ctx
     bucket = hash->buckets[key % ctx->bucket_number];
 
     ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: look_up_ip=%ud, now=%T", ntohl(key), now);
+                   "limit_access: look_up_ip=%ud, now=%T", ntohl(key), now);
 
     while (bucket) {
         if (bucket->key == key) {
 
             ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                    "limit_access: find ip, expire=%T", bucket->expire);
+                           "limit_access: find ip, expire=%T", bucket->expire);
 
             if (bucket->expire > now) {
                 return 1;
@@ -1391,7 +1418,7 @@ ngx_http_limit_access_lookup_ip(ngx_http_request_t *r, ngx_http_limit_access_ctx
 
 ngx_int_t 
 ngx_http_limit_access_lookup_variable(ngx_http_request_t *r, 
-        ngx_http_limit_access_ctx_t *ctx)
+    ngx_http_limit_access_ctx_t *ctx)
 {
     time_t                          now;
     ngx_str_t                       variable;
@@ -1429,7 +1456,8 @@ ngx_http_limit_access_lookup_variable(ngx_http_request_t *r,
     bucket = hash->buckets[key % ctx->bucket_number];
 
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access: look_up_variable=\"%V\", key=%ud, now=%T", &variable, key, now);
+                   "limit_access: look_up_variable=\"%V\", key=%ud, now=%T",
+                   &variable, key, now);
 
     while (bucket) {
         if (bucket->key == key && bucket->len == variable.len) {
@@ -1437,7 +1465,8 @@ ngx_http_limit_access_lookup_variable(ngx_http_request_t *r,
             if (ngx_strncmp(bucket->value, variable.data, variable.len) == 0) {
 
                 ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                        "limit_access: find variable, expire=%T", bucket->expire);
+                               "limit_access: find variable, expire=%T",
+                               bucket->expire);
 
                 if (bucket->expire > now) {
                     return 1;
@@ -1452,5 +1481,3 @@ ngx_http_limit_access_lookup_variable(ngx_http_request_t *r,
 
     return 0;
 }
-
-
