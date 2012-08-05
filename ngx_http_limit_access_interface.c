@@ -344,7 +344,7 @@ limit_access_type(ngx_http_request_t *r, ngx_str_t *value)
             if (type[i].flag != ctx->type) {
 
                 ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                              "limit_access: type not match: %ud != %ud", 
+                              "limit_access: type not match: %ui != %ui", 
                               type[i].flag, ctx->type);
 
                 return NGX_ERROR;
@@ -989,7 +989,7 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
     }
 
     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                           "total record = %ud\n", total);
+                           "total record = %ui\n", total);
 
     return NGX_OK;
 }
@@ -1017,7 +1017,7 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
     expire = ngx_time() + request_ctx->expire;
 
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                   "limit_access: add ban_variable=\"%V\", key=%ud, expire=%T",
+                   "limit_access: add ban_variable=\"%V\", key=%ui, expire=%T",
                    variable, key, expire);
 
     while (bucket) {
@@ -1030,7 +1030,7 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
         }
 
         ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                       "limit_access: ban_variable, key=%ud, bucket=%p, "
+                       "limit_access: ban_variable, key=%ui, bucket=%p, "
                        "bucket->next=%p", 
                        key, bucket, bucket->next);
 
@@ -1181,12 +1181,12 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
                     ngx_http_time(time_buffer, bucket->expire);
 
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                                    "key[%ud]: variable=\"%*s\", expire=%s\n",
+                                    "key[%ui]: variable=\"%*s\", expire=%s\n",
                                     i, bucket->len, bucket->value, time_buffer);
 
                 } else {
                     b->last = ngx_snprintf(b->last, b->end - b->last, 
-                                  "key[%ud]: variable=\"%*s\", expire=expired\n",
+                                  "key[%ui]: variable=\"%*s\", expire=expired\n",
                                   i, bucket->len, bucket->value);
                 }
 
@@ -1200,7 +1200,7 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
     }
 
     b->last = ngx_snprintf(b->last, b->end - b->last, 
-            "total record = %ud\n", total);
+                           "total record = %ui\n", total);
 
     return NGX_OK;
 }
@@ -1456,7 +1456,7 @@ ngx_http_limit_access_lookup_variable(ngx_http_request_t *r,
     bucket = hash->buckets[key % ctx->bucket_number];
 
     ngx_log_debug3(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                   "limit_access: look_up_variable=\"%V\", key=%ud, now=%T",
+                   "limit_access: look_up_variable=\"%V\", key=%ui, now=%T",
                    &variable, key, now);
 
     while (bucket) {

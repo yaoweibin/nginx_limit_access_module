@@ -210,10 +210,6 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
 
     lacf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
 
-    ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-                   "limit_access_handler: %p, %d",
-                   lacf->shm_zone, lacf->limit_check);
-
     if (lacf->shm_zone == NULL || !lacf->limit_check) {
         return NGX_DECLINED;
     }
@@ -221,7 +217,7 @@ ngx_http_limit_access_handler(ngx_http_request_t *r)
     ctx = lacf->shm_zone->data;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-            "limit_access_handler");
+                   "limit_access_handler");
 
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
@@ -285,8 +281,8 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
         if (ctx->bucket_number != octx->bucket_number) {
 
             ngx_log_error(NGX_LOG_EMERG, shm_zone->shm.log, 0,
-                          "limit_access \"%V\" uses the bucket_number=%d "
-                          "while previously it used the bucket_number=%d, "
+                          "limit_access \"%V\" uses the bucket_number=%ui "
+                          "while previously it used the bucket_number=%ui, "
                           "please restart nginx",
                           &shm_zone->shm.name, ctx->bucket_number,
                           octx->bucket_number);
