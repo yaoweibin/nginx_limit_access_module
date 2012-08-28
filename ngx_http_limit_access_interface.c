@@ -8,24 +8,24 @@ static void ngx_free_limit_access_bucket(ngx_http_limit_access_ctx_t *ctx,
     ngx_http_limit_access_bucket_t *bucket);
 
 static ngx_int_t ngx_http_limit_access_process_post(ngx_http_request_t *r, 
-    u_char *data, size_t len);
+    u_char *data, size_t len, ngx_flag_t flag);
 static ngx_int_t ngx_http_limit_access_process_param(ngx_http_request_t *r, 
-    ngx_str_t *param);
+    ngx_str_t *param, ngx_flag_t flag);
 
 static ngx_int_t limit_access_type(ngx_http_request_t *r,
-    ngx_str_t *value);
+    ngx_str_t *value, ngx_flag_t flag);
 static ngx_int_t limit_access_ban_expire(ngx_http_request_t *r,
-    ngx_str_t *value);
+    ngx_str_t *value, ngx_flag_t flag);
 static ngx_int_t limit_access_ban_list(ngx_http_request_t *r,
-    ngx_str_t *value);
+    ngx_str_t *value, ngx_flag_t flag);
 static ngx_int_t limit_access_free_list(ngx_http_request_t *r,
-    ngx_str_t *value);
+    ngx_str_t *value, ngx_flag_t flag);
 static ngx_int_t limit_access_show_list(ngx_http_request_t *r,
-    ngx_str_t *value);
+    ngx_str_t *value, ngx_flag_t flag);
 static ngx_int_t limit_access_destroy_list(ngx_http_request_t *r,
-    ngx_str_t *value);
+    ngx_str_t *value, ngx_flag_t flag);
 static ngx_int_t limit_access_expire_list(ngx_http_request_t *r,
-    ngx_str_t *value);
+    ngx_str_t *value, ngx_flag_t flag);
 
 static ngx_int_t ngx_http_limit_access_ban_ip(ngx_http_request_t *r, 
     ngx_http_limit_access_ctx_t *ctx, in_addr_t ip);
@@ -166,7 +166,21 @@ ngx_http_limit_access_process_handler(ngx_http_request_t *r)
         }
     }
 
-    rc = ngx_http_limit_access_process_post(r, data, len);
+    rc = ngx_http_limit_access_process_post(r, data, len,
+                                            PROCESS_COMMAND_ATTRIBUTE);
+
+    if (rc != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "limit_access: invalid post body: \"%*s\"",
+                      len, data);
+
+        request_ctx->status = NGX_HTTP_BAD_REQUEST;
+
+        goto finish;
+    }
+
+    rc = ngx_http_limit_access_process_post(r, data, len,
+                                            PROCESS_COMMAND_CONTENT);
 
     if (rc != NGX_OK) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
@@ -212,7 +226,7 @@ finish:
 
 static ngx_int_t 
 ngx_http_limit_access_process_post(ngx_http_request_t *r, 
-    u_char *data, size_t len)
+    u_char *data, size_t len, ngx_flag_t flag)
 {
     u_char    *p, *last;
     ngx_int_t  rc;
@@ -243,7 +257,7 @@ ngx_http_limit_access_process_post(ngx_http_request_t *r,
         }
 
         if (param.len != 0) {
-            rc = ngx_http_limit_access_process_param(r, &param);
+            rc = ngx_http_limit_access_process_param(r, &param, flag);
 
             if(rc != NGX_OK) {
                 return rc;
@@ -257,7 +271,7 @@ ngx_http_limit_access_process_post(ngx_http_request_t *r,
 
 
 static ngx_int_t 
-ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
+ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param, ngx_flag_t flag)
 {
     u_char                            *p, *src, *dst;
     ngx_str_t                          name;
@@ -297,10 +311,10 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
     cmd = directives;
     for(i = 0; ;i++) {
         if ((cmd[i].name.len == name.len)
-            && (ngx_strncmp(cmd[i].name.data, name.data, name.len) == 0)) {
+            && (ngx_strncasecmp(cmd[i].name.data, name.data, name.len) == 0)) {
 
             if (cmd[i].handler) {
-                return cmd[i].handler(r, &value);
+                return cmd[i].handler(r, &value, flag);
 
             } else {
                 return NGX_OK;
@@ -321,12 +335,16 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param)
 
 
 static ngx_int_t 
-limit_access_type(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_type(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
 {
     ngx_uint_t                             i;
     ngx_http_limit_access_ctx_t           *ctx;
     ngx_http_limit_access_conf_t          *lacf;
     ngx_http_limit_access_type_name_t     *type;
+
+    if (flag != PROCESS_COMMAND_ATTRIBUTE) {
+        return NGX_OK;
+    }
 
     lacf = ngx_http_get_module_loc_conf(r, ngx_http_limit_access_module);
 
@@ -387,10 +405,15 @@ ngx_atoui(u_char *line, size_t n)
 
 
 static ngx_int_t 
-limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value,
+    ngx_flag_t flag)
 {
     time_t                                expire;
     ngx_http_limit_access_request_ctx_t  *request_ctx;
+
+    if (flag != PROCESS_COMMAND_ATTRIBUTE) {
+        return NGX_OK;
+    }
 
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 
@@ -410,7 +433,7 @@ limit_access_ban_expire(ngx_http_request_t *r, ngx_str_t *value)
 
 
 static ngx_int_t 
-limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
 {
     u_char                                *start, *pos, *last;
     ngx_str_t                              variable;
@@ -421,6 +444,10 @@ limit_access_ban_list(ngx_http_request_t *r, ngx_str_t *value)
     ngx_http_limit_access_hash_t          *hash;
     ngx_http_limit_access_conf_t          *lacf;
     ngx_http_limit_access_request_ctx_t   *request_ctx;
+
+    if (flag != PROCESS_COMMAND_CONTENT) {
+        return NGX_OK;
+    }
 
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 
@@ -623,7 +650,7 @@ ngx_http_limit_access_ban_ip(ngx_http_request_t *r,
 
 
 static ngx_int_t 
-limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
 {
     u_char                                *start, *pos, *last;
     ngx_buf_t                             *b;
@@ -634,6 +661,10 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value)
     ngx_http_limit_access_hash_t          *hash;
     ngx_http_limit_access_conf_t          *lacf;
     ngx_http_limit_access_request_ctx_t   *request_ctx;
+
+    if (flag != PROCESS_COMMAND_CONTENT) {
+        return NGX_OK;
+    }
 
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 
@@ -765,7 +796,7 @@ ngx_http_limit_access_free_ip(ngx_http_request_t *r,
 
 
 static ngx_int_t
-limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
 {
     u_char                                *start, *pos, *last;
     ngx_str_t                              variable;
@@ -776,6 +807,10 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
     ngx_http_limit_access_hash_t          *hash;
     ngx_http_limit_access_conf_t          *lacf;
     ngx_http_limit_access_request_ctx_t   *request_ctx;
+
+    if (flag != PROCESS_COMMAND_CONTENT) {
+        return NGX_OK;
+    }
 
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 
@@ -832,7 +867,7 @@ limit_access_show_list(ngx_http_request_t *r, ngx_str_t *value)
             }
 
             /* compare with string "all" */
-            if ((pos- start == sizeof("all") - 1) && 
+            if ((pos - start == sizeof("all") - 1) && 
                  ngx_strncmp(start, "all", sizeof("all") - 1) == 0) {
 
                 if (ctx->type == HASH_IP) {
@@ -1207,13 +1242,17 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
 
 
 static ngx_int_t
-limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_destroy_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
 {
     ngx_buf_t                             *b;
     ngx_http_limit_access_ctx_t           *ctx;
     ngx_http_limit_access_hash_t          *hash;
     ngx_http_limit_access_conf_t          *lacf;
     ngx_http_limit_access_request_ctx_t   *request_ctx;
+
+    if (flag != PROCESS_COMMAND_CONTENT) {
+        return NGX_OK;
+    }
 
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 
@@ -1287,13 +1326,17 @@ ngx_http_limit_access_destroy_list(ngx_http_request_t *r,
 
 
 static ngx_int_t
-limit_access_expire_list(ngx_http_request_t *r, ngx_str_t *value)
+limit_access_expire_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
 {
     ngx_buf_t                             *b;
     ngx_http_limit_access_ctx_t           *ctx;
     ngx_http_limit_access_hash_t          *hash;
     ngx_http_limit_access_conf_t          *lacf;
     ngx_http_limit_access_request_ctx_t   *request_ctx;
+
+    if (flag != PROCESS_COMMAND_CONTENT) {
+        return NGX_OK;
+    }
 
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 

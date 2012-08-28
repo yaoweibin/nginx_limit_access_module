@@ -13,6 +13,7 @@ typedef struct {
     time_t                                 expire;
     ngx_uint_t                             status;
     ngx_buf_t                             *buf;
+    ngx_flag_t                             show_all_list;
 } ngx_http_limit_access_request_ctx_t;
 
 typedef struct ngx_http_limit_access_bucket_s {
@@ -52,8 +53,12 @@ typedef struct {
     unsigned                               limit_check;
 } ngx_http_limit_access_conf_t;
 
+
+#define PROCESS_COMMAND_ATTRIBUTE  0x0001
+#define PROCESS_COMMAND_CONTENT    0x0002
+
 typedef ngx_int_t (*ngx_http_limit_access_process_value_pt) 
-    (ngx_http_request_t *r, ngx_str_t *value);
+    (ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag);
 
 typedef struct {
     ngx_str_t                              name;
