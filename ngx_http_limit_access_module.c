@@ -55,6 +55,13 @@ static ngx_command_t  ngx_http_limit_access_commands[] = {
       offsetof(ngx_http_limit_access_conf_t, default_expire),
       NULL },
 
+    { ngx_string("limit_access_buffer_size"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_limit_access_conf_t, output_buffer_size),
+      NULL },
+
     { ngx_string("limit_access_interface"),
       NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_http_limit_access_interface,
@@ -644,6 +651,7 @@ ngx_http_limit_access_create_conf(ngx_conf_t *cf)
 
     conf->limit_log_level = NGX_CONF_UNSET_UINT;
     conf->default_expire = NGX_CONF_UNSET;
+    conf->output_buffer_size = NGX_CONF_UNSET_SIZE;
 
     return conf;
 }
@@ -667,6 +675,8 @@ ngx_http_limit_access_merge_conf(ngx_conf_t *cf, void *parent, void *child)
                               NGX_LOG_ERR);
     ngx_conf_merge_sec_value(conf->default_expire, prev->default_expire, 
                              60 * 60 * 24);
+    ngx_conf_merge_size_value(conf->output_buffer_size, prev->output_buffer_size, 
+                             256 * 1024);
 
     return NGX_CONF_OK;
 }

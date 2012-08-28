@@ -49,6 +49,7 @@ typedef struct {
 typedef struct {
     ngx_shm_zone_t                        *shm_zone;
     time_t                                 default_expire;
+    size_t                                 output_buffer_size;
     ngx_uint_t                             limit_log_level;
     unsigned                               limit_check;
 } ngx_http_limit_access_conf_t;
