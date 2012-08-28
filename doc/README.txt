@@ -161,6 +161,15 @@ Directives
     is 1 day. The unit of time can be: s(second,default), m(minute),
     h(hour), d(day), w(week), M(month), y(year).
 
+  limit_access_buffer_size
+    syntax: *limit_access_buffer_size size;*
+
+    default: *256k*
+
+    context: *http, server, location*
+
+    Set the output buffer size
+
   limit_access_log_level
     syntax: *limit_access_log_level info|notice|warn|error;*
 
@@ -227,18 +236,14 @@ Installation
 
 Compatibility
     My test bed 0.8.53.
-
 TODO
 Known Issues
     Developing
-
 Changelogs
   v0.1
     first release
-
 Authors
     Weibin Yao(姚伟斌) *yaoweibin AT gmail DOT com*
-
 License
     This README template is from agentzh (<http://github.com/agentzh>).
 
@@ -253,7 +258,6 @@ License
     Redistributions in binary form must reproduce the above copyright
     notice, this list of conditions and the following disclaimer in the
     documentation and/or other materials provided with the distribution.
-
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
     IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
     TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A

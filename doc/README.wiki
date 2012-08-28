@@ -1,4 +1,4 @@
-= Name =
+﻿= Name =
 
 '''nginx_limit_access_module''' - support to deny request by specific variable with HTTP POST interface 
 
@@ -158,6 +158,16 @@ If you want to do the same deny action in several locations, you can use the dir
 '''context:''' ''http, server, location''
 
 Set the default expire time for the ban list record. Default expire time is 1 day. The unit of time can be: s(second,default), m(minute), h(hour), d(day), w(week), M(month), y(year). 
+
+== limit_access_buffer_size ==
+
+'''syntax:''' ''limit_access_buffer_size size;''
+
+'''default:''' ''256k''
+
+'''context:''' ''http, server, location''
+
+Set the output buffer size 
 
 == limit_access_log_level ==
 
