@@ -34,6 +34,8 @@ static ngx_int_t ngx_http_limit_access_free_ip(ngx_http_request_t *r,
 static ngx_int_t ngx_http_limit_access_show_ip(ngx_http_request_t *r, 
     ngx_http_limit_access_ctx_t *ctx, ngx_buf_t *b, in_addr_t ip);
 
+static void ngx_http_limit_access_unescape_value(ngx_str_t *value);
+
 static ngx_int_t ngx_http_limit_access_ban_variable(ngx_http_request_t *r, 
     ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable);
 static ngx_int_t ngx_http_limit_access_free_variable(ngx_http_request_t *r, 
@@ -1028,6 +1030,23 @@ ngx_http_limit_access_show_ip(ngx_http_request_t *r,
 }
 
 
+static void
+ngx_http_limit_access_unescape_value(ngx_str_t *value)
+{
+    u_char *src, *dst;
+
+    if (value->len == 0) {
+        return;
+    }
+
+    src = dst = value->data;
+
+    ngx_unescape_uri(&dst, &src, value->len, NGX_UNESCAPE_URI);
+
+    value->len = dst - value->data;
+}
+
+
 static ngx_int_t 
 ngx_http_limit_access_ban_variable(ngx_http_request_t *r, 
     ngx_http_limit_access_ctx_t *ctx, ngx_str_t *variable)
@@ -1041,6 +1060,8 @@ ngx_http_limit_access_ban_variable(ngx_http_request_t *r,
     request_ctx = ngx_http_get_module_ctx(r, ngx_http_limit_access_module);
 
     hash = ctx->sh;
+
+    ngx_http_limit_access_unescape_value(variable);
 
     key = ngx_hash_key(variable->data, variable->len);
 
@@ -1106,6 +1127,8 @@ ngx_http_limit_access_free_variable(ngx_http_request_t *r,
 
     hash = ctx->sh;
 
+    ngx_http_limit_access_unescape_value(variable);
+
     key = ngx_hash_key(variable->data, variable->len);
 
     h = &hash->buckets[key % ctx->bucket_number];
@@ -1160,6 +1183,8 @@ ngx_http_limit_access_show_variable(ngx_http_request_t *r,
 
     /* show the sepcific variable */
     if (variable != NULL) {
+
+        ngx_http_limit_access_unescape_value(variable);
 
         key = ngx_hash_key(variable->data, variable->len);
         bucket = hash->buckets[key % ctx->bucket_number];
