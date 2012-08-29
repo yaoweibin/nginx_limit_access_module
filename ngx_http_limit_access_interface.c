@@ -280,9 +280,10 @@ ngx_http_limit_access_process_post(ngx_http_request_t *r,
 
 
 static ngx_int_t 
-ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param, ngx_flag_t flag)
+ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param,
+    ngx_flag_t flag)
 {
-    u_char                            *p, *src, *dst;
+    u_char                            *p;
     ngx_str_t                          name;
     ngx_str_t                          value;
     ngx_uint_t                         i;
@@ -299,12 +300,6 @@ ngx_http_limit_access_process_param(ngx_http_request_t *r, ngx_str_t *param, ngx
 
         value.data = p + 1;
         value.len = param->len - name.len - 1;
-
-        src = dst = value.data;
-
-        ngx_unescape_uri(&dst, &src, value.len, NGX_UNESCAPE_URI);
-
-        value.len = dst - value.data;
 
     } else {
         name.data = param->data;
