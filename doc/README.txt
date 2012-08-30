@@ -168,7 +168,10 @@ Directives
 
     context: *http, server, location*
 
-    Set the output buffer size
+    Specify the output buffer size. If you have a large hash table and want
+    to show all the records, your result page may be truncated to the buffer
+    size. You could enlarge the buffer size. Each record could take up about
+    128 bytes.
 
   limit_access_log_level
     syntax: *limit_access_log_level info|notice|warn|error;*
