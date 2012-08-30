@@ -662,7 +662,8 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
     ngx_buf_t                             *b;
     ngx_str_t                              variable;
     ngx_int_t                              rc, is_binary;
-    in_addr_t                             ip;
+    in_addr_t                              ip;
+    ngx_uint_t                             count;
     ngx_http_limit_access_ctx_t           *ctx;
     ngx_http_limit_access_hash_t          *hash;
     ngx_http_limit_access_conf_t          *lacf;
@@ -691,6 +692,7 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
     }
 
     is_binary = 0;
+    count = 0;
 
     last = value->data + value->len;
     for (start = pos = value->data; pos < last; pos++) {
@@ -721,6 +723,9 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
                 rc = ngx_http_limit_access_free_ip(r, ctx, ip);
                 if (rc == NGX_ERROR) {
                     goto fail;
+                    
+                } else if (rc == NGX_OK) {
+                    count++;
                 }
 
             } else if (ctx->type == HASH_VARIABLE) {
@@ -730,7 +735,11 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
                 rc = ngx_http_limit_access_free_variable(r, ctx, &variable);
                 if (rc == NGX_ERROR) {
                     goto fail;
+                    
+                } else if (rc == NGX_OK) {
+                    count++;
                 }
+
             }
 
             pos++;
@@ -741,7 +750,9 @@ limit_access_free_list(ngx_http_request_t *r, ngx_str_t *value, ngx_flag_t flag)
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
     b = request_ctx->buf;
-    b->last = ngx_snprintf(b->last, b->end - b->last, "free list succeed\n");
+    b->last = ngx_snprintf(b->last, b->end - b->last,
+                           "free list succeed with %ui records\n",
+                           count);
 
     return NGX_OK;
 
@@ -797,7 +808,7 @@ ngx_http_limit_access_free_ip(ngx_http_request_t *r,
         bucket = bucket->next;
     }
 
-    return NGX_OK;
+    return NGX_DECLINED;
 }
 
 
@@ -1163,7 +1174,7 @@ ngx_http_limit_access_free_variable(ngx_http_request_t *r,
         bucket = bucket->next;
     }
 
-    return NGX_OK;
+    return NGX_DECLINED;
 }
 
 

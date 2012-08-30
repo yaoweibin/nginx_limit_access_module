@@ -136,7 +136,7 @@ server {
 --- request eval
 "POST /limit_interface\n\n" . 
 "free_type=ip&free_list=127.0.0.1,127.1.1.1"
---- response_body_like: free list succeed
+--- response_body_like: free list succeed with 2 records
 
 === TEST 5: the following get test
 --- no_manager
