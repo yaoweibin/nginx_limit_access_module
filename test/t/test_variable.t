@@ -521,3 +521,116 @@ server {
 "show_type=variable&show_list=tom%2Ccat,jerry"
 --- response_body_like
 ^.*tom,cat", expire=.*$
+
+=== TEST 18: the free_list with variable
+--- no_manager
+--- config
+limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
+server {
+    listen       1982;
+    server_name  localhost;
+
+    limit_access_variable zone=one $limit_access_deny;
+    limit_access_output_size 1M;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+}
+--- request eval
+"POST /limit_interface\n\n" . 
+"free_type=variable&free_list=tom%2Ccat"
+--- response_body_like: free list succeed
+
+=== TEST 19: the show_list with variable
+--- no_manager
+--- config
+limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
+server {
+    listen       1982;
+    server_name  localhost;
+
+    limit_access_variable zone=one $limit_access_deny;
+    limit_access_output_size 1M;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+}
+--- request eval
+"POST /limit_interface\n\n" . 
+"show_type=variable&show_list=tom%2Ccat"
+--- response_body_like: ^Ban hash table:(.*)there is no this record(.*)$
+
+=== TEST 20: the ban_list with variable
+--- no_manager
+--- config
+limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
+server {
+    listen       1982;
+    server_name  localhost;
+
+    limit_access_variable zone=one $limit_access_deny;
+    limit_access_output_size 1M;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+}
+--- request eval
+"POST /limit_interface\n\n" . 
+"ban_type=variable&ban_expire=3600&ban_list=Mozilla/4.0 (Windows NT 6.1) AppleWebKit/537.4 (KHTML%2C like Gecko) Chrome/22.0.1229.0 Safari/537.4,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.4 (KHTML%2C like Gecko) Chrome/22.0.1229.0 Safari/537.4"
+--- response_body_like: ban list succeed
+
+=== TEST 21: the show_list with variable
+--- no_manager
+--- config
+limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
+server {
+    listen       1982;
+    server_name  localhost;
+
+    limit_access_variable zone=one $limit_access_deny;
+    limit_access_output_size 1M;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+}
+--- request eval
+"POST /limit_interface\n\n" . 
+"show_type=variable&show_list=Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.4 (KHTML%2C like Gecko) Chrome/22.0.1229.0 Safari/537.4"
+--- response_body_like
+^.*Chrome/22.0.1229.0 Safari/537.4", expire=.*$
