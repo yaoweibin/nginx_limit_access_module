@@ -196,6 +196,10 @@ ngx_http_limit_access_deny_variable(ngx_http_request_t *r,
     ngx_shmtx_unlock(&ctx->shpool->mutex);
 
     if (rc == 1) {
+
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "limit access deny variable is true");
+
         *v = ngx_http_variable_true_value;
         return NGX_OK;
     }
