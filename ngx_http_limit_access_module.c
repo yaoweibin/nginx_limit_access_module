@@ -198,7 +198,8 @@ ngx_http_limit_access_deny_variable(ngx_http_request_t *r,
     if (rc == 1) {
 
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                      "limit access deny variable is true");
+                      "limit access deny variable is true, type = %ui",
+                      ctx->type);
 
         *v = ngx_http_variable_true_value;
         return NGX_OK;
