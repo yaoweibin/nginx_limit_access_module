@@ -31,7 +31,7 @@ __DATA__
 
 === TEST 1: the get test
 --- http_config
-limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
+limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
 --- config
     location / {
         root   html;
@@ -55,7 +55,7 @@ GET /
 === TEST 2: the ban_list test
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=variable&ban_list=127.0.0.1,127.1.1.1"
+"ban_type=ip&ban_list=127.0.0.1,127.1.1.1"
 --- response_body_like: ban list succeed
 
 === TEST 3: the following get test
@@ -67,7 +67,7 @@ GET /
 === TEST 4: the free_list test
 --- request eval
 "POST /limit_interface\n\n" . 
-"free_type=variable&free_list=127.0.0.1,127.1.1.1"
+"free_type=ip&free_list=127.0.0.1,127.1.1.1"
 --- response_body_like: free list succeed with 2 records
 
 === TEST 5: the following get test
@@ -78,7 +78,7 @@ GET /
 === TEST 6: the ban_list test again
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=variable&ban_list=127.0.0.1,127.1.1.1"
+"ban_type=ip&ban_list=2130706433,2130772225"
 --- response_body_like: ban list succeed
 
 === TEST 7: the following get test
@@ -102,8 +102,8 @@ GET /
 === TEST 10: the show_list test
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=variable&show_list=127.0.0.1"
---- response_body_like: ^Ban hash table:(.*)variable(.*)$
+"show_type=ip&show_list=2130706433"
+--- response_body_like: ^Ban hash table:(.*)ip(.*)$
 
 === TEST 11: the destroy_list test
 --- request eval
@@ -119,19 +119,19 @@ GET /
 === TEST 13: the show_list test
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=variable&show_list=all"
+"show_type=ip&show_list=all"
 --- response_body_like: ^Ban hash table:(.*)total record = 0$
 
 === TEST 14: the show_list test, wrong type
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=ip&show_list=all"
+"show_type=variable&show_list=all"
 --- error_code: 400
 --- response_body_like: ^.*$
 
 === TEST 15: the show_list test, set the output buffer size
 --- http_config
-limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
+limit_access_zone  zone=one:5m bucket_number=10007 type=ip;
 --- config
     limit_access_variable zone=one $limit_access_deny;
     limit_access_buffer_size 1M;
@@ -153,15 +153,14 @@ limit_access_zone  zone=one:5m bucket_number=10007 type=$remote_addr;
     }
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=variable&show_list=all"
+"show_type=ip&show_list=all"
 --- response_body_like: ^Ban hash table:(.*)total record = 0$
 
-=== TEST 16: the ban_list with variable
+=== TEST 16: the hash table test, set the bucket number to be 3
 --- http_config
-limit_access_zone  zone=one:5m bucket_number=10007 type=$http_user_agent;
+limit_access_zone  zone=one:5m bucket_number=3 type=ip;
 --- config
     limit_access_variable zone=one $limit_access_deny;
-    limit_access_buffer_size 1M;
     location / {
         root   html;
         index  index.html index.htm;
@@ -174,39 +173,31 @@ limit_access_zone  zone=one:5m bucket_number=10007 type=$http_user_agent;
     location /limit_interface {
         limit_access_interface zone=one;
     }
+
+    location /limit_status {
+        limit_access_status zone=one;
+    }
 --- request eval
 "POST /limit_interface\n\n" . 
-"ban_type=variable&ban_expire=3600&ban_list=tom%2Ccat,jerry"
+"ban_type=ip&ban_list=127.0.0.1,127.0.0.4"
 --- response_body_like: ban list succeed
 
-=== TEST 17: the show_list with variable
+=== TEST 17: the hash table test, show 127.0.0.4
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=variable&show_list=tom%2Ccat,jerry"
---- response_body_like
-^.*tom,cat", expire=.*$
+"show_type=ip&show_list=127.0.0.4"
+--- response_body_like: (.*)127.0.0.4(.*)
 
-=== TEST 18: the free_list with variable
+=== TEST 18: the hash table test, delete 127.0.0.1
 --- request eval
 "POST /limit_interface\n\n" . 
-"free_type=variable&free_list=tom%2Ccat"
---- response_body_like: free list succeed
+"free_type=ip&free_list=127.0.0.1"
+--- response_body
+free list succeed with 1 records
 
-=== TEST 19: the show_list with variable
+=== TEST 19: the hash table test, show 127.0.0.4
 --- request eval
 "POST /limit_interface\n\n" . 
-"show_type=variable&show_list=tom%2Ccat"
---- response_body_like: ^Ban hash table:(.*)there is no this record(.*)$
+"show_type=ip&show_list=127.0.0.4"
+--- response_body_like: (.*)127.0.0.4(.*)expire
 
-=== TEST 20: the ban_list with variable
---- request eval
-"POST /limit_interface\n\n" . 
-"ban_type=variable&ban_expire=3600&ban_list=Mozilla/4.0 (Windows NT 6.1) AppleWebKit/537.4 (KHTML%2C like Gecko) Chrome/22.0.1229.0 Safari/537.4,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.4 (KHTML%2C like Gecko) Chrome/22.0.1229.0 Safari/537.4"
---- response_body_like: ban list succeed
-
-=== TEST 21: the show_list with variable
---- request eval
-"POST /limit_interface\n\n" . 
-"show_type=variable&show_list=Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.4 (KHTML%2C like Gecko) Chrome/22.0.1229.0 Safari/537.4"
---- response_body_like
-^.*Chrome/22.0.1229.0 Safari/537.4", expire=.*$
