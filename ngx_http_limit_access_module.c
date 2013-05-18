@@ -345,6 +345,7 @@ ngx_http_limit_access_init_zone(ngx_shm_zone_t *shm_zone, void *data)
             ctx->bucket_number * sizeof(ngx_http_limit_access_bucket_t *));
 
     ctx->sh->valid = 1;
+    ctx->sh->free = NULL;
 
     len = sizeof(" in limit_access zone \"\"") + shm_zone->shm.name.len;
 

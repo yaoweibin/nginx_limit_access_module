@@ -201,3 +201,67 @@ free list succeed with 1 records
 "show_type=ip&show_list=127.0.0.4"
 --- response_body_like: (.*)127.0.0.4(.*)expire
 
+=== TEST 20: the hash table test, set the bucket number to be 3, default expires 1s
+--- http_config
+limit_access_zone  zone=one:5m bucket_number=3 type=ip;
+--- config
+    limit_access_variable zone=one $limit_access_deny;
+     limit_access_default_expire 1s;
+    location / {
+        root   html;
+        index  index.html index.htm;
+
+        if ($limit_access_deny) {
+            return 403;
+        }
+    }
+
+    location /limit_interface {
+        limit_access_interface zone=one;
+    }
+
+    location /limit_status {
+        limit_access_status zone=one;
+    }
+--- request eval
+"POST /limit_interface\n\n" . 
+"ban_type=ip&ban_list=127.0.0.1,127.0.0.2,127.0.0.3,127.0.0.4,127.0.0.5"
+--- response_body_like: ban list succeed
+
+=== TEST 21: the following get test
+--- request 
+GET /
+--- error_code: 403
+--- response_body_like: .*
+
+=== TEST 22: add more ip
+--- request eval
+"POST /limit_interface\n\n" . 
+"ban_type=ip&ban_list=127.0.0.6,127.0.0.7,127.0.0.8,127.0.0.9,127.0.0.10&ban_expire=1d"
+--- response_body_like: ban list succeed
+
+=== TEST 23: the show_list
+--- request eval
+"POST /limit_interface\n\n" . 
+"show_type=ip&show_list=all"
+--- response_body_like
+^(.*)key\[2\]: ip=127.0.0.1(.*)key\[2\]: ip=127.0.0.10(.*)
+
+=== TEST 24: the expire_list
+--- request eval
+"POST /limit_interface\n\n" . 
+"expire_list"
+--- response_body_like: Ban hash table expired.
+
+=== TEST 25: add the ip again
+--- request eval
+"POST /limit_interface\n\n" . 
+"ban_type=ip&ban_list=127.0.0.1,127.0.0.2,127.0.0.3,127.0.0.4,127.0.0.5"
+--- response_body_like: ban list succeed
+
+=== TEST 26: the show_list
+--- request eval
+"POST /limit_interface\n\n" . 
+"show_type=ip&show_list=all"
+--- response_body_like
+^(.*)key\[2\]: ip=127.0.0.1(.*)key\[2\]: ip=127.0.0.10(.*)
